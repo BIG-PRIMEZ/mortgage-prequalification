@@ -23,11 +23,12 @@ async function bootstrap() {
     session({
       secret: process.env.SESSION_SECRET || 'mortgage-secret-key',
       resave: false,
-      saveUninitialized: false,
+      saveUninitialized: true,
       cookie: {
         maxAge: 3600000, // 1 hour
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
       },
     }),
   );

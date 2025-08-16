@@ -90,10 +90,11 @@ export class DataExtractorService {
         // Handle "k" notation first
         /(?:have|saved)\s*\$?(\d+k)\s*(?:for\s*)?down/i,
         /down\s*payment\s*\$?(\d+k)/i,
+        /down\s*payment\s*amount\s*\$?(\d+k)/i,
         /(\d+k)\s*down/i,
         /(\d+k)\s*(?:for\s*)?down\s*payment/i,
         // Standard patterns with full number capture
-        /(?:have|saved|putting down|can put down)\s*\$?(\d+(?:,\d{3})*(?:\.\d{2})?)\s*(?:for\s*)?(?:down payment|down|deposit)/i,
+        /(?:have|saved|putting down|can put down | down payment amount)\s*\$?(\d+(?:,\d{3})*(?:\.\d{2})?)\s*(?:for\s*)?(?:down payment|down|deposit)/i,
         /down\s*payment\s*(?:is|of|about)?\s*\$?(\d+(?:,\d{3})*(?:\.\d{2})?)/i,
         /\$?(\d+(?:,\d{3})*(?:\.\d{2})?)\s*(?:for\s*)?down\s*(?:payment)?/i,
         /(?:deposit|down)\s*(?:is|of)?\s*\$?(\d+(?:,\d{3})*(?:\.\d{2})?)/i,
