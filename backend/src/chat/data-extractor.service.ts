@@ -71,6 +71,8 @@ export class DataExtractorService {
         /(?:looking at|considering|interested in|want to buy)\s*(?:a\s*)?\$?(\d+(?:,\d{3})*(?:\.\d{2})?)\s*(?:home|house|property)/i,
         /(?:buying|purchasing)\s*(?:a|the)?\s*(?:home|house|property)\s*(?:for|at)\s*\$?(\d+(?:,\d{3})*(?:\.\d{2})?)/i,
         /\$?(\d+(?:,\d{3})*(?:\.\d{2})?)\s*(?:home|house|property|place)/i,
+        // Pattern for "The purchase price of the property I'm interested..."
+        /purchase\s*price\s*of\s*the\s*property\s*I'?m?\s*interested.*?(?:is|in)?\s*\$?(\d+(?:,\d{3})*(?:\.\d{2})?)/i,
         // Simple patterns
         /price:?\s*\$?(\d+(?:,\d{3})*(?:\.\d{2})?)/i,
         /cost:?\s*\$?(\d+(?:,\d{3})*(?:\.\d{2})?)/i,

@@ -194,7 +194,7 @@ IMPORTANT RULES:
   }
 
   private hasRequiredData(data: any): boolean {
-    const requiredFields = ['grossAnnualIncome', 'monthlyDebts'];
+    const requiredFields = ['grossAnnualIncome', 'monthlyDebts', 'email', 'phone'];
     
     if (data.intent === 'purchase') {
       requiredFields.push('purchasePrice', 'downPayment');

@@ -22,8 +22,9 @@ async function bootstrap() {
   app.use(
     session({
       secret: process.env.SESSION_SECRET || 'mortgage-secret-key',
-      resave: false,
+      resave: true,
       saveUninitialized: true,
+      rolling: true,
       cookie: {
         maxAge: 3600000, // 1 hour
         httpOnly: true,
