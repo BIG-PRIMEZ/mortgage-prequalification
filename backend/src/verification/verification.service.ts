@@ -4,9 +4,14 @@ import * as twilio from 'twilio';
 import sgMail from '@sendgrid/mail';
 import { formatPhoneToE164, isValidPhoneNumber } from './phone-formatter';
 
+/**
+ * Service responsible for sending and verifying SMS/email verification codes.
+ * Uses Twilio for SMS and SendGrid for email delivery.
+ */
 @Injectable()
 export class VerificationService {
   private twilioClient: twilio.Twilio;
+  // In-memory storage for verification codes with expiry times
   private verificationCodes: Map<string, { code: string; expiry: Date }> = new Map();
 
   constructor(private configService: ConfigService) {
@@ -37,6 +42,13 @@ export class VerificationService {
     }
   }
 
+  /**
+   * Sends verification codes to user's phone and email.
+   * Currently only SMS verification is required; email is stored but not verified.
+   * 
+   * @param email - User's email address (stored only)
+   * @param phone - User's phone number (SMS sent)
+   */
   async sendVerificationCodes(email: string, phone: string) {
     // Only send SMS verification, skip email
     await this.sendSMSCode(phone);
@@ -45,28 +57,38 @@ export class VerificationService {
     console.log('📧 Email stored (no verification required):', email);
   }
 
+  /**
+   * Sends SMS verification code to the user's phone.
+   * Handles phone number formatting and Twilio API integration.
+   * 
+   * @param phone - Phone number (can be in various formats)
+   * @throws Error if phone number is invalid or SMS fails to send
+   */
   async sendSMSCode(phone: string): Promise<void> {
     console.log('📱 sendSMSCode called with phone:', phone);
     console.log('Phone type:', typeof phone);
     console.log('Phone length:', phone.length);
     
-    // Validate phone number
+    // Validate phone number format
     if (!isValidPhoneNumber(phone)) {
       console.error('❌ Invalid phone number format:', phone);
       throw new Error('Invalid phone number format');
     }
     
-    // Convert to E.164 format for Twilio
-    // Default to Nigerian country code if you're primarily serving Nigerian users
+    // Convert to E.164 format required by Twilio (e.g., +2348012345678)
+    // Default to Nigerian country code (+234) if not specified
     const formattedPhone = formatPhoneToE164(phone, '+234');
     console.log('📱 Formatted phone for Twilio:', formattedPhone);
     
+    // Generate 6-digit verification code
     const code = this.generateCode();
     console.log('🔑 Generated code:', code);
     
-    this.storeCode(`sms:${phone}`, code); // Store with original format for verification
+    // Store code with original phone format (for verification matching)
+    this.storeCode(`sms:${phone}`, code);
     console.log('💾 Stored code with key:', `sms:${phone}`);
     
+    // Send SMS via Twilio if configured
     if (this.twilioClient) {
       try {
         console.log(`Attempting to send SMS to ${formattedPhone} from ${this.configService.get<string>('TWILIO_PHONE_NUMBER')}`);
@@ -87,9 +109,9 @@ export class VerificationService {
         throw new Error(`Failed to send SMS: ${error.message}`);
       }
     } else {
-      // Development mode - just log the code
-      console.log('Twilio client not initialized. Fallback mode.');
-      console.log(`SMS Code for ${phone}: ${code}`);
+      // Development/testing mode - log code to console when Twilio not configured
+      console.log('⚠️ Twilio client not initialized. Development mode.');
+      console.log(`📱 SMS Code for ${phone}: ${code}`);
     }
   }
 
@@ -123,6 +145,15 @@ export class VerificationService {
     }
   }
 
+  /**
+   * Verifies a code entered by the user.
+   * Checks if code matches and hasn't expired.
+   * 
+   * @param type - 'sms' or 'email' verification
+   * @param code - The verification code entered by user
+   * @param identifier - Phone number or email address
+   * @returns true if code is valid and not expired
+   */
   async verifyCode(type: 'sms' | 'email', code: string, identifier: string): Promise<boolean> {
     // Build the key using type and identifier (phone or email)
     const key = `${type}:${identifier}`;
@@ -133,8 +164,9 @@ export class VerificationService {
       return false;
     }
 
+    // Check if code has expired (10 minute validity)
     if (storedData.expiry < new Date()) {
-      console.log(`Verification code expired for ${key}`);
+      console.log(`⏰ Verification code expired for ${key}`);
       this.verificationCodes.delete(key); // Clean up expired codes
       return false;
     }
@@ -148,10 +180,22 @@ export class VerificationService {
     return isValid;
   }
 
+  /**
+   * Generates a random 6-digit verification code.
+   * 
+   * @returns 6-digit code as string (e.g., "123456")
+   */
   private generateCode(): string {
     return Math.floor(100000 + Math.random() * 900000).toString();
   }
 
+  /**
+   * Stores verification code with expiry time.
+   * Codes expire after 10 minutes for security.
+   * 
+   * @param key - Storage key (format: "type:identifier")
+   * @param code - The verification code to store
+   */
   private storeCode(key: string, code: string): void {
     const expiry = new Date();
     expiry.setMinutes(expiry.getMinutes() + 10); // 10 minute expiry

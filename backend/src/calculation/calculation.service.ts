@@ -71,31 +71,39 @@ export class CalculationService {
     };
   }
 
+  /**
+   * Calculates net (after-tax) monthly income for an applicant.
+   * Uses Australian Tax Office (ATO) tax tables to determine PAYG withholding.
+   * 
+   * @param applicant - Applicant's income and tax information
+   * @returns Net monthly income after tax
+   */
   private calculateNetMonthlyIncome(applicant: ApplicantData): number {
-    // Calculate total gross annual income (employment income)
+    // Calculate total gross annual income (includes base salary + overtime + bonuses)
     const grossAnnualEmployment = applicant.salary + applicant.overtime + applicant.bonus;
     
-    // Convert to weekly for tax calculation
+    // Convert to weekly for tax calculation (ATO tables use weekly amounts)
     const grossWeekly = grossAnnualEmployment / 52;
     
-    // Find appropriate tax bracket
+    // Select appropriate tax table based on HECS-HELP debt status
+    // STSL = Study and Training Support Loans (includes additional withholding)
     const taxTable = applicant.hasHECS ? STSL_TAX_TABLE : STANDARD_TAX_TABLE;
     const bracket = this.findTaxBracket(grossWeekly, taxTable);
     
-    // Calculate net weekly income using UBank formula
-    // Net = Gross - (aCoef * Gross - bCoef)
+    // Calculate PAYG tax using ATO formula
+    // Tax = a × Gross Income - b (where a and b are coefficients from tax table)
     const weeklyTax = bracket.aCoef * grossWeekly - bracket.bCoef;
     const netWeekly = grossWeekly - weeklyTax;
     
-    // Convert to monthly
+    // Convert net weekly to monthly (multiply by 52 weeks, divide by 12 months)
     const netMonthlyEmployment = netWeekly * 52 / 12;
     
-    // Add other income sources (these are typically not taxed in the same way)
+    // Add other income sources (these have different tax treatment)
     const otherMonthlyIncome = (
-      applicant.nonTaxableIncome + 
-      applicant.rentalIncome * 0.75 + // Rental income often calculated at 75%
-      applicant.governmentPayments + 
-      applicant.investmentIncome
+      applicant.nonTaxableIncome +       // Tax-free income
+      applicant.rentalIncome * 0.75 +     // Banks typically count 75% of rental income
+      applicant.governmentPayments +      // Centrelink payments etc.
+      applicant.investmentIncome          // Dividends, interest etc.
     ) / 12;
     
     return netMonthlyEmployment + otherMonthlyIncome;

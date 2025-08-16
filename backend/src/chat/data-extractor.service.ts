@@ -19,14 +19,23 @@ export class DataExtractorService {
       field: 'grossAnnualIncome',
       patterns: [
         // Handle "k" notation first (e.g., "80k", "$80k")
+        // Matches: "income is 80k", "salary of $80k", "I earn 80k", "I make $80k"
         /(?:income|salary|earn|make)\s*(?:is|of)?\s*\$?(\d+k)/i,
+        // Matches: "$80k per year", "80k annually", "$80k annual", "80k yearly"
         /\$?(\d+k)\s*(?:per year|annually|annual|yearly)/i,
+        // Matches: "make $80k annually", "make 80k per year", "make 80k a year"
         /make\s+\$?(\d+k)\s*(?:annually|per year|a year)?/i,
+        // Matches: "earn $80k annually", "earn 80k per year", "earn 80k a year"
         /earn\s+\$?(\d+k)\s*(?:annually|per year|a year)?/i,
-        // Standard patterns with full number capture
+        
+        // Standard patterns with full number capture (e.g., "80,000" or "80000.00")
+        // Matches: "annual income is $80,000", "income of 80000", "salary around $80,000.00"
         /(?:annual income|yearly income|income|salary|earn|make)\s*(?:is|of|about|around)?\s*\$?(\d+(?:,\d{3})*(?:\.\d{2})?)/i,
+        // Matches: "$80,000 per year", "80000 annually", "$80,000.00 yearly"
         /\$?(\d+(?:,\d{3})*(?:\.\d{2})?)\s*(?:per year|annually|annual|yearly|\/year|\/yr)/i,
+        // Matches: "earn $80,000 a year", "earn 80000 per year"
         /earn\s+\$?(\d+(?:,\d{3})*(?:\.\d{2})?)\s*(?:a year|per year)?/i,
+        // Matches: "make $80,000 a year", "make 80000 per year"
         /make\s+\$?(\d+(?:,\d{3})*(?:\.\d{2})?)\s*(?:a year|per year)?/i,
       ],
       postprocessor: (value: string) => {
@@ -43,14 +52,23 @@ export class DataExtractorService {
       field: 'monthlyDebts',
       patterns: [
         // Standard patterns
+        // Matches: "monthly debt obligations are $450", "monthly debt obligations is $450"
         /(?:monthly\s*debt\s*obligations?)\s*(?:are|is)?\s*\$?(\d+(?:,\d{3})*(?:\.\d{2})?)/i,
+        // Matches: "$450 in monthly debts", "450 per month expenses", "$450/month payments"
         /\$?(\d+(?:,\d{3})*(?:\.\d{2})?)\s*(?:in\s*)?(?:monthly|per month|\/month|\/mo)\s*(?:debts?|payments?|obligations?|expenses?)/i,
+        // Matches: "monthly debts are $450", "per month payments total 450"
         /(?:monthly|per month)\s*(?:debts?|payments?|obligations?|expenses?)\s*(?:are|is|of|about|total)?\s*\$?(\d+(?:,\d{3})*(?:\.\d{2})?)/i,
+        // Matches: "debts are $450 monthly", "payments is 450 per month"
         /(?:debts?|payments?|obligations?)\s*(?:are|is)?\s*\$?(\d+(?:,\d{3})*(?:\.\d{2})?)\s*(?:monthly|per month|a month|\/month)/i,
+        // Matches: "pay $450 monthly", "pay 450 per month", "pay $450 a month"
         /pay\s+\$?(\d+(?:,\d{3})*(?:\.\d{2})?)\s*(?:monthly|per month|a month)/i,
+        // Matches: "$450 in monthly debt", "450 monthly payment"
         /\$?(\d+(?:,\d{3})*(?:\.\d{2})?)\s*(?:in\s*)?monthly\s*(?:debt|payment)/i,
+        
         // Simple patterns for common phrases
+        // Matches: "monthly: $450", "monthly:450"
         /monthly:?\s*\$?(\d+(?:,\d{3})*(?:\.\d{2})?)/i,
+        // Matches: "debt: $450", "debts: 450 monthly"
         /debts?:?\s*\$?(\d+(?:,\d{3})*(?:\.\d{2})?)\s*(?:monthly|\/mo)?/i,
       ],
       postprocessor: (value: string) => parseInt(value.replace(/[$,]/g, ''))
@@ -71,8 +89,10 @@ export class DataExtractorService {
         /(?:looking at|considering|interested in|want to buy)\s*(?:a\s*)?\$?(\d+(?:,\d{3})*(?:\.\d{2})?)\s*(?:home|house|property)/i,
         /(?:buying|purchasing)\s*(?:a|the)?\s*(?:home|house|property)\s*(?:for|at)\s*\$?(\d+(?:,\d{3})*(?:\.\d{2})?)/i,
         /\$?(\d+(?:,\d{3})*(?:\.\d{2})?)\s*(?:home|house|property|place)/i,
-        // Pattern for "The purchase price of the property I'm interested..."
+        // Patterns for "The purchase price of the property I'm interested/looking at..."
         /purchase\s*price\s*of\s*the\s*property\s*I'?m?\s*interested.*?(?:is|in)?\s*\$?(\d+(?:,\d{3})*(?:\.\d{2})?)/i,
+        /purchase\s*price\s*of\s*the\s*property\s*(?:you\s*are|you're)\s*interested\s*in\s*is\s*\$?(\d+(?:,\d{3})*(?:\.\d{2})?)/i,
+        /purchase\s*price\s*of\s*the\s*property\s*I'?m?\s*looking\s*at\s*is\s*\$?(\d+(?:,\d{3})*(?:\.\d{2})?)/i,
         // Simple patterns
         /price:?\s*\$?(\d+(?:,\d{3})*(?:\.\d{2})?)/i,
         /cost:?\s*\$?(\d+(?:,\d{3})*(?:\.\d{2})?)/i,
@@ -159,6 +179,13 @@ export class DataExtractorService {
     {
       field: 'email',
       patterns: [
+        // Email pattern breakdown:
+        // \b = word boundary
+        // [a-zA-Z0-9][a-zA-Z0-9._%+-]* = username part (letters, numbers, dots, underscores, etc.)
+        // @ = literal @ symbol
+        // [a-zA-Z0-9][a-zA-Z0-9.-]* = domain name part
+        // \.[a-zA-Z]{2,} = dot followed by at least 2 letters for TLD (.com, .org, etc.)
+        // Matches: "john.doe@example.com", "jane_smith123@company.co.uk"
         /\b([a-zA-Z0-9][a-zA-Z0-9._%+-]*@[a-zA-Z0-9][a-zA-Z0-9.-]*\.[a-zA-Z]{2,})\b/,
       ],
       postprocessor: (value: string) => value.toLowerCase().trim()
@@ -169,15 +196,22 @@ export class DataExtractorService {
       field: 'phone',
       patterns: [
         // Match word boundaries for phone numbers
-        /\b(\d{11})\b/,  // 11 consecutive digits
-        /\b(\d{10})\b/,  // 10 consecutive digits
+        /\b(\d{11})\b/,  // 11 consecutive digits (e.g., "14155551234")
+        /\b(\d{10})\b/,  // 10 consecutive digits (e.g., "4155551234")
+        
         // International format with country code
+        // Matches: "+1-415-555-1234", "+44 20 7123 4567", "1 (415) 555-1234"
         /\b((?:\+?\d{1,3}[-.\s]?)?\(?\d{3,4}\)?[-.\s]?\d{3,4}[-.\s]?\d{3,6})\b/,
+        
         // US format variations
+        // Matches: "(415) 555-1234", "415-555-1234", "415.555.1234", "415 555 1234"
         /\b(\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4})\b/,
+        
         // With extensions
+        // Matches: "415-555-1234 ext 123", "415.555.1234 x123", "415 555 1234 extension 12345"
         /\b(\d{3}[-.\s]?\d{3}[-.\s]?\d{4}(?:\s*(?:ext|x|extension)\.?\s*\d{1,5})?)/i,
       ],
+      // Remove formatting characters and leading 1 (US country code)
       postprocessor: (value: string) => value.replace(/[-.\s()]/g, '').replace(/^1/, '')
     },
     
@@ -185,7 +219,11 @@ export class DataExtractorService {
     {
       field: 'fullName',
       patterns: [
+        // Pattern explanation: (?:...) is a non-capturing group, \s* matches any whitespace
+        // [A-Z][a-z]+ matches a capitalized word, (?:\s+[A-Z][a-z]+)+ matches additional capitalized words
+        // Matches: "my name is John Doe", "my full name is Jane Marie Smith", "I am Bob Johnson", "I'm Sarah Lee"
         /(?:my\s*(?:full\s*)?name\s*is|i\s*am|i'm)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)/,
+        // Matches: "name: John Doe", "called: Jane Smith"
         /(?:name|called)\s*:\s*([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)/,
       ],
       postprocessor: (value: string) => value.trim()

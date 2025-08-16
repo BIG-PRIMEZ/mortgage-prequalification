@@ -8,7 +8,12 @@ import type { ConversationState, Message, BorrowingCapacityResult } from '../typ
 import { chatService } from '../services/chatService';
 import { socketService } from '../services/socketService';
 
+/**
+ * Main chat container component that manages the entire conversation flow.
+ * Handles state management, message sending, verification, and results display.
+ */
 const ChatContainer: React.FC = () => {
+  // Core conversation state tracking the phase, collected data, and messages
   const [conversationState, setConversationState] = useState<ConversationState>({
     phase: 'intent',
     intent: null,
@@ -16,14 +21,19 @@ const ChatContainer: React.FC = () => {
     verificationStatus: { sms: false, email: false },
     messages: []
   });
-  const [isLoading, setIsLoading] = useState(false);
-  const [isTyping, setIsTyping] = useState(false);
-  const [showVerification, setShowVerification] = useState(false);
-  const [results, setResults] = useState<BorrowingCapacityResult | null>(null);
-  const messagesEndRef = useRef<null | HTMLDivElement>(null);
+  // UI state flags
+  const [isLoading, setIsLoading] = useState(false);  // Shows when waiting for AI response
+  const [isTyping, setIsTyping] = useState(false);    // Shows typing indicator
+  const [showVerification, setShowVerification] = useState(false);  // Controls verification modal
+  const [results, setResults] = useState<BorrowingCapacityResult | null>(null);  // Stores calculation results
+  const messagesEndRef = useRef<null | HTMLDivElement>(null);  // For auto-scrolling to latest message
 
+  /**
+   * Initialize chat on component mount.
+   * Sets up welcome message and WebSocket connection for real-time messaging.
+   */
   useEffect(() => {
-    // Add initial welcome message
+    // Add initial welcome message asking about intent (purchase vs refinance)
     const welcomeMessage: Message = {
       id: 'welcome',
       content: 'Welcome to the Mortgage Pre-Qualification Assistant! Are you looking to purchase a property or refinance an existing mortgage?',
@@ -35,7 +45,9 @@ const ChatContainer: React.FC = () => {
       messages: [welcomeMessage]
     }));
 
+    // Establish WebSocket connection for real-time communication
     socketService.connect();
+    // Listen for incoming messages from the server
     socketService.onMessage((message: Message) => {
       setConversationState(prev => ({
         ...prev,
@@ -43,16 +55,28 @@ const ChatContainer: React.FC = () => {
       }));
     });
 
+    // Cleanup: disconnect WebSocket when component unmounts
     return () => {
       socketService.disconnect();
     };
   }, []);
 
+  /**
+   * Auto-scroll to bottom when new messages arrive.
+   * Ensures user always sees the latest message.
+   */
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [conversationState.messages]);
 
+  /**
+   * Handles user message submission.
+   * Adds message to chat, sends to backend, and processes response.
+   * 
+   * @param content - The user's message text
+   */
   const handleSendMessage = async (content: string) => {
+    // Create user message object
     const userMessage: Message = {
       id: Date.now().toString(),
       content,
@@ -60,22 +84,26 @@ const ChatContainer: React.FC = () => {
       timestamp: new Date()
     };
 
+    // Add user message to chat immediately for responsive UI
     setConversationState(prev => ({
       ...prev,
       messages: [...prev.messages, userMessage]
     }));
 
     setIsLoading(true);
-    // Simulate typing indicator delay
+    // Show typing indicator for 1.5 seconds to simulate AI thinking
     setIsTyping(true);
     setTimeout(() => setIsTyping(false), 1500);
     try {
+      // Send message to backend and wait for AI response
       const response = await chatService.sendMessage(content, conversationState);
       
+      // Show verification modal when all data is collected
       if (response.phase === 'verification' && !showVerification) {
         setShowVerification(true);
       }
       
+      // Update conversation state with new phase and collected data
       setConversationState(prev => ({
         ...prev,
         phase: response.phase,
@@ -83,7 +111,7 @@ const ChatContainer: React.FC = () => {
         collectedData: { ...prev.collectedData, ...response.collectedData }
       }));
       
-      // If we have results, store them
+      // Store calculation results if provided
       if (response.results) {
         setResults(response.results);
       }
@@ -105,6 +133,10 @@ const ChatContainer: React.FC = () => {
     }
   };
 
+  /**
+   * Handles successful SMS verification.
+   * Updates state to show results phase - calculation happens on backend.
+   */
   const handleVerificationComplete = async () => {
     setShowVerification(false);
     setConversationState(prev => ({
@@ -113,55 +145,54 @@ const ChatContainer: React.FC = () => {
       phase: 'results'
     }));
     
-    // Trigger calculation after verification
-    try {
-      const response = await chatService.calculateBorrowingCapacity(conversationState.collectedData);
-      setResults(response);
-    } catch (error) {
-      console.error('Error calculating results:', error);
-    }
+    // Note: Results calculation happens on backend after verification
+    // We don't need to trigger it here - backend sends results automatically
   };
   
+  /**
+   * Resets entire application for a new calculation.
+   * Clears both frontend state and backend session to prevent data contamination.
+   */
   const handleNewCalculation = async () => {
-    // Clear all state first
+    // Clear all frontend state
     setResults(null);
     setShowVerification(false);
     setIsLoading(false);
     setIsTyping(false);
     
-    // Clear backend session
+    // IMPORTANT: Clear backend session to prevent old data from persisting
     try {
       await chatService.resetSession();
     } catch (error) {
       console.error('Error resetting session:', error);
     }
     
-    // Clear frontend state with fresh conversation
+    // Reset to initial conversation state with new welcome message
     setConversationState({
       phase: 'intent',
       intent: null,
       collectedData: {},
       verificationStatus: { sms: false, email: false },
       messages: [{
-        id: 'welcome-' + Date.now(), // Unique ID to force re-render
+        id: 'welcome-' + Date.now(), // Unique ID ensures React re-renders
         content: 'Welcome back! Are you looking to purchase a property or refinance an existing mortgage?',
         sender: 'agent',
         timestamp: new Date()
       }]
     });
     
-    // Force a re-render by scrolling to top
+    // Scroll to top for fresh start
     window.scrollTo(0, 0);
   };
 
-  // Show results display if we have results
+  // Render results page when calculation is complete
   if (conversationState.phase === 'results' && results) {
     return (
       <Container maxWidth="md" sx={{ minHeight: '100vh', py: 4 }}>
         <ResultsDisplay
           result={results}
           userData={conversationState.collectedData}
-          onNewCalculation={handleNewCalculation}
+          onNewCalculation={handleNewCalculation}  // Allow user to start over
         />
       </Container>
     );
