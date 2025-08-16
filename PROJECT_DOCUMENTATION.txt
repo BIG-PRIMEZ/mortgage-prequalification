@@ -1,0 +1,359 @@
+===============================================================================
+                    MORTGAGE PRE-QUALIFICATION AGENT
+                         PROJECT DOCUMENTATION
+===============================================================================
+
+PROJECT OVERVIEW
+----------------
+The Mortgage Pre-Qualification Agent is an AI-powered conversational chatbot 
+system designed to guide users through the mortgage pre-qualification process. 
+It uses natural language processing to extract financial information from 
+conversations and calculates borrowing capacity using exact UBank formulas.
+
+Key Features:
+- AI-powered conversations using OpenAI GPT-4
+- Real-time WebSocket communication
+- SMS and email verification
+- Accurate borrowing capacity calculations
+- Professional Material-UI interface
+- Session-based user management
+
+
+ARCHITECTURE
+------------
+The system follows a client-server architecture:
+
+Frontend (React + TypeScript)
+    |
+    v
+WebSocket + REST API
+    |
+    v
+Backend (NestJS + TypeScript)
+    |
+    v
+External Services (OpenAI, Twilio, SendGrid)
+
+
+TECHNOLOGY STACK
+----------------
+Frontend:
+- React 19.1.1 (UI framework)
+- TypeScript 5.7 (Type safety)
+- Material-UI 7.3.1 (Component library)
+- Socket.io Client 4.8.1 (Real-time communication)
+- Vite 7.0 (Build tool)
+- Axios 1.11.0 (HTTP client)
+
+Backend:
+- NestJS 11.1.6 (Node.js framework)
+- TypeScript 5.7 (Type safety)
+- Socket.io 4.8.1 (WebSocket server)
+- OpenAI 5.12.2 (AI integration)
+- Twilio 5.8.0 (SMS service)
+- SendGrid 8.1.5 (Email service)
+- Express Session (Session management)
+
+
+PROJECT STRUCTURE
+-----------------
+mortgage-prequalification/
+├── backend/                    # NestJS backend application
+│   ├── src/
+│   │   ├── calculation/       # Borrowing capacity logic
+│   │   ├── chat/             # Chat functionality & AI
+│   │   ├── shared/           # Shared interfaces
+│   │   ├── user/             # User management
+│   │   └── verification/     # SMS/Email verification
+│   ├── test/                 # Test files
+│   └── package.json          # Backend dependencies
+│
+├── frontend/                  # React frontend application
+│   ├── src/
+│   │   ├── components/       # React components
+│   │   ├── services/         # API services
+│   │   └── types/            # TypeScript types
+│   ├── public/               # Static assets
+│   └── package.json          # Frontend dependencies
+│
+└── Documentation files:
+    ├── README.md             # Main documentation
+    ├── INSTALLATION.md       # Installation guide
+    ├── REQUIREMENTS.md       # System requirements
+    ├── API_DOCUMENTATION.md  # API reference
+    ├── PROGRESS.md           # Development progress
+    └── PROJECT_DOCUMENTATION.txt # This file
+
+
+CORE MODULES
+------------
+
+1. CHAT MODULE
+   - Purpose: Manages AI conversations and data extraction
+   - Key Files:
+     * chat.service.ts - OpenAI integration
+     * chat.gateway.ts - WebSocket handling
+     * data-extractor.service.ts - NLP data extraction
+   - Conversation Phases:
+     * Intent detection (purchase/refinance)
+     * Data collection
+     * Verification
+     * Results presentation
+
+2. CALCULATION MODULE
+   - Purpose: Implements exact UBank Excel formula calculations
+   - Key Files:
+     * calculation.service.ts - Main calculation logic
+     * tax-tables.ts - Australian tax calculations
+     * hem-tables.ts - Household Expenditure Measure
+   - Features:
+     * Progressive tax calculation
+     * Medicare levy
+     * HECS/HELP debt impact
+     * Living expense estimation
+
+3. VERIFICATION MODULE
+   - Purpose: Handles SMS and email verification
+   - Key Files:
+     * verification.service.ts - Twilio/SendGrid integration
+     * phone-formatter.ts - International phone formatting
+   - Features:
+     * 6-digit code generation
+     * 10-minute expiry
+     * Rate limiting protection
+     * E.164 phone formatting
+
+4. USER MODULE
+   - Purpose: Session and user data management
+   - Features:
+     * Session-based storage
+     * Data persistence during conversation
+     * Privacy-focused (no permanent storage)
+
+
+CONVERSATION FLOW
+-----------------
+1. User initiates conversation
+2. AI detects intent (purchase/refinance)
+3. AI extracts data from natural language
+4. Progressive data collection through conversation
+5. Phone/email verification required
+6. Borrowing capacity calculation
+7. Results presentation with email option
+
+
+API ENDPOINTS
+-------------
+REST API:
+- POST /chat/message - Send chat message
+- POST /chat/reset - Reset conversation
+- POST /verification/send - Send verification code
+- POST /verification/verify - Verify code
+- POST /calculation/borrowing-capacity - Calculate capacity
+- GET /health - Health check
+
+WebSocket Events:
+- Client→Server: message, join
+- Server→Client: message, connect, disconnect
+
+
+EXTERNAL SERVICES
+-----------------
+1. OpenAI (GPT-4)
+   - Natural language processing
+   - Conversation management
+   - Data extraction
+   - Cost: ~$0.03 per conversation
+
+2. Twilio (SMS)
+   - Phone number verification
+   - SMS code delivery
+   - Cost: ~$0.0075 per SMS
+
+3. SendGrid (Email)
+   - Email verification
+   - Results delivery
+   - Cost: Free tier (100 emails/day)
+
+
+SECURITY CONSIDERATIONS
+-----------------------
+- Session-based authentication
+- Environment variable protection
+- Input validation and sanitization
+- CORS configuration
+- Rate limiting (planned)
+- HTTPS enforcement (production)
+- No persistent user data storage
+
+
+DEPLOYMENT
+----------
+Development:
+- Backend: npm run start:dev (port 3000)
+- Frontend: npm run dev (port 5173)
+
+Production:
+- Docker containerization recommended
+- PM2 for process management
+- Nginx reverse proxy
+- SSL certificate required
+- Environment-specific configs
+
+
+TESTING
+-------
+Backend Testing:
+- Unit tests: npm test
+- E2E tests: npm run test:e2e
+- Coverage: npm run test:cov
+- Custom tests for SMS, email, chat flow
+
+Frontend Testing:
+- Currently needs implementation
+- Recommended: React Testing Library, Cypress
+
+
+PERFORMANCE
+-----------
+Expected Metrics:
+- Initial load: < 3 seconds
+- Chat response: < 2 seconds
+- SMS delivery: < 10 seconds
+- Concurrent users: 100+
+
+Scalability:
+- Horizontal scaling possible
+- Load balancer compatible
+- WebSocket requires sticky sessions
+- Database needed for multi-instance
+
+
+CURRENT STATUS (31% Complete)
+-----------------------------
+Completed:
+✓ Core chat functionality
+✓ Real-time communication
+✓ NLP data extraction
+✓ UBank calculations
+✓ SMS/Email verification
+✓ Basic UI implementation
+✓ Session management
+✓ Professional theme
+✓ Mobile responsiveness
+✓ Type safety
+
+In Progress:
+- State persistence (Redis/DB)
+- Security & rate limiting
+- Enhanced error handling
+- Comprehensive testing
+- Production deployment
+- Performance optimization
+- Enhanced NLP extraction
+
+
+KNOWN ISSUES
+------------
+1. Sessions are memory-based (lost on restart)
+2. No rate limiting implemented
+3. Error handling needs enhancement
+4. Testing coverage incomplete
+5. No monitoring/logging system
+
+
+FUTURE ENHANCEMENTS
+-------------------
+1. Redis session persistence
+2. PostgreSQL for data storage
+3. Advanced security features
+4. Comprehensive test suite
+5. CI/CD pipeline
+6. Monitoring dashboard
+7. Admin interface
+8. Multi-language support
+9. Advanced analytics
+10. API rate limiting
+
+
+MAINTENANCE NOTES
+-----------------
+- Regular dependency updates required
+- Monitor API usage and costs
+- Review security patches
+- Update tax tables annually
+- Check API service changes
+- Maintain test coverage >80%
+
+
+TROUBLESHOOTING GUIDE
+---------------------
+Common Issues:
+
+1. White Screen Error
+   - Check browser console
+   - Verify all dependencies installed
+   - Clear browser cache
+   - Check TypeScript compilation
+
+2. WebSocket Connection Failed
+   - Ensure backend running
+   - Check CORS settings
+   - Verify port 3000 accessible
+   - Check firewall rules
+
+3. SMS Not Sending
+   - Verify Twilio credentials
+   - Check phone format (E.164)
+   - Ensure geographic permissions
+   - Check Twilio balance
+
+4. Import Errors
+   - SendGrid: use import sgMail (not import * as)
+   - Check package versions
+   - Clear node_modules and reinstall
+
+5. Session Loss
+   - Check session secret set
+   - Verify cookie configuration
+   - Backend restart loses sessions
+
+
+DEVELOPMENT GUIDELINES
+----------------------
+1. Code Style:
+   - Use ESLint and Prettier
+   - Follow TypeScript best practices
+   - Meaningful variable names
+   - Comment complex logic
+
+2. Git Workflow:
+   - Feature branches
+   - Descriptive commits
+   - Pull request reviews
+   - No direct main pushes
+
+3. Testing:
+   - Write tests for new features
+   - Maintain >80% coverage
+   - Test edge cases
+   - E2E for critical paths
+
+4. Security:
+   - Never commit secrets
+   - Validate all inputs
+   - Sanitize outputs
+   - Regular security audits
+
+
+CONTACT & SUPPORT
+-----------------
+- GitHub Issues: Report bugs and feature requests
+- Documentation: See README.md for detailed info
+- API Docs: See API_DOCUMENTATION.md
+- Progress: See PROGRESS.md for roadmap
+
+
+===============================================================================
+                              END OF DOCUMENTATION
+===============================================================================
