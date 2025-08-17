@@ -240,6 +240,12 @@ export class DataExtractorService {
     console.log(`📝 Original: "${message}"`);
     console.log(`📝 Cleaned: "${cleanedMessage}"`);
     
+    // Count and display existing fields
+    const existingFieldCount = existingData ? Object.keys(existingData).filter(key => existingData[key] !== undefined).length : 0;
+    if (existingFieldCount > 0) {
+      console.log(`📋 Previously collected: ${existingFieldCount} fields (${Object.keys(existingData || {}).filter(key => existingData[key]).join(', ')})`);
+    }
+    
     // Extract intent if in intent phase - only from user messages, not questions
     if (phase === 'intent') {
       const lowerMessage = cleanedMessage.toLowerCase();
@@ -290,7 +296,20 @@ export class DataExtractorService {
       this.contextBasedExtraction(cleanedMessage, extracted, existingData);
     }
     
-    console.log(`📊 Total extracted: ${Object.keys(extracted).length} fields`);
+    // Calculate total fields (existing + newly extracted)
+    const newFieldCount = Object.keys(extracted).length;
+    const totalFieldCount = existingFieldCount + newFieldCount;
+    
+    console.log(`📊 Extracted in this message: ${newFieldCount} fields`);
+    console.log(`📊 Total collected so far: ${totalFieldCount} fields`);
+    
+    // Show all collected fields for clarity
+    const allFields = { ...existingData, ...extracted };
+    const collectedFields = Object.keys(allFields).filter(key => allFields[key] !== undefined);
+    if (collectedFields.length > 0) {
+      console.log(`📋 All collected fields: ${collectedFields.join(', ')}`);
+    }
+    
     return extracted;
   }
 
