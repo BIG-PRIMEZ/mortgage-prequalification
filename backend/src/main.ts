@@ -47,8 +47,8 @@ async function bootstrap() {
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'Cookie'],
-    exposedHeaders: ['set-cookie'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Cookie', 'X-Session-Id'],
+    exposedHeaders: ['set-cookie', 'X-Session-Id'],
   };
   
   app.enableCors(corsOptions);
