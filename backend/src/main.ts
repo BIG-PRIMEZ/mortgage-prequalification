@@ -4,6 +4,7 @@ import { AppModule } from './app.module';
 import session from 'express-session';
 import { RedisStore } from 'connect-redis';
 import { createClient } from 'redis';
+import { PersistentMemoryStore } from './shared/services/persistent-memory-store';
 const FileStore = require('session-file-store')(session);
 
 /**
@@ -94,7 +95,12 @@ async function bootstrap() {
       });
     }
   } else {
-    console.log('💾 Using in-memory session store (development mode)');
+    // Use persistent memory store for development or when Redis isn't available
+    console.log('💾 Using persistent in-memory session store');
+    sessionConfig.store = new PersistentMemoryStore({
+      path: './sessions',
+      saveInterval: 30000, // Save every 30 seconds
+    }) as any;
   }
 
   app.use(session(sessionConfig));
