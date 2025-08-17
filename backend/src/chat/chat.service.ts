@@ -180,12 +180,10 @@ IMPORTANT RULES:
 
   /**
    * Updates conversation state based on extracted data and determines next phase.
-   * This method implements the revalidation feature - it extracts data from both
-   * user input AND AI response to ensure accuracy.
    * 
    * @param currentState - Current conversation state
    * @param userMessage - User's message to extract data from
-   * @param aiResponse - AI's response which may contain corrected/summarized data
+   * @param aiResponse - AI's response (not used for extraction)
    * @returns Updated conversation state with new phase and collected data
    */
   private async updateConversationState(
@@ -196,30 +194,18 @@ IMPORTANT RULES:
     // Extract data from user message based on current phase
     const extractedData = this.extractDataFromMessage(userMessage, currentState.phase, currentState.collectedData);
     
-    // REVALIDATION: Also extract data from AI response
-    // This allows the AI to correct values (e.g., "your income is $78,000" corrects user's "80k")
-    // Skip AI extraction during intent phase to avoid false positives
-    const aiExtractedData = currentState.phase === 'intent' 
-      ? {} 
-      : this.extractDataFromMessage(aiResponse, currentState.phase, currentState.collectedData);
-    
-    // Merge data with priority: AI extracted data > user extracted data > existing data
-    // This ensures AI summaries can correct/update previously collected data
+    // Merge data - only from user input
     const updatedData = {
       ...currentState.collectedData,
       ...extractedData,
-      ...aiExtractedData,
     };
-    
-    // Log any differences for debugging
-    this.logDataUpdates(currentState.collectedData, updatedData, aiResponse);
 
     // Determine next phase based on what data we have
     // Phase flow: intent -> collection -> verification -> results
     let nextPhase = currentState.phase;
     
     // Move to collection phase once we know if it's purchase or refinance
-    if (currentState.phase === 'intent' && (extractedData.intent || aiExtractedData.intent)) {
+    if (currentState.phase === 'intent' && extractedData.intent) {
       nextPhase = 'collection';
     } 
     // Move to verification once all required financial data is collected
@@ -235,7 +221,7 @@ IMPORTANT RULES:
     return {
       ...currentState,
       phase: nextPhase as ConversationPhase,
-      intent: extractedData.intent || aiExtractedData.intent || currentState.intent,
+      intent: extractedData.intent || currentState.intent,
       collectedData: updatedData,
     };
   }
@@ -274,30 +260,4 @@ IMPORTANT RULES:
     return requiredFields.every(field => data[field] !== undefined);
   }
 
-  /**
-   * Logs any data fields that were updated or corrected by the AI response.
-   * This helps track when the revalidation system makes corrections.
-   * 
-   * @param oldData - Previous data state
-   * @param newData - New data state after extraction
-   * @param aiResponse - AI response that contained the updates
-   */
-  private logDataUpdates(oldData: any, newData: any, aiResponse: string): void {
-    const updatedFields: string[] = [];
-    
-    // Check for updated/corrected fields
-    Object.keys(newData).forEach(key => {
-      if (oldData[key] !== newData[key] && newData[key] !== undefined) {
-        updatedFields.push(key);
-        console.log(`🔄 Field updated: ${key}`);
-        console.log(`   Old value: ${oldData[key]}`);
-        console.log(`   New value: ${newData[key]}`);
-      }
-    });
-    
-    if (updatedFields.length > 0) {
-      console.log(`📝 AI Response contained updates for: ${updatedFields.join(', ')}`);
-      console.log(`📝 AI Response excerpt: "${aiResponse.substring(0, 200)}..."`);
-    }
-  }
 }
