@@ -2,9 +2,10 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
 import session from 'express-session';
-import RedisStore from 'connect-redis';
+import connectRedis from 'connect-redis';
 import { createClient } from 'redis';
 const FileStore = require('session-file-store')(session);
+const RedisStore = connectRedis(session);
 
 /**
  * Application bootstrap function.
