@@ -1,5 +1,6 @@
 const { execSync } = require('child_process');
 const fs = require('fs');
+const path = require('path');
 
 console.log('🔨 Building NestJS application...');
 
@@ -12,8 +13,15 @@ try {
     fs.mkdirSync('dist');
   }
   
-  // Use TypeScript compiler directly
-  execSync('npx tsc -p tsconfig.build.json', { stdio: 'inherit' });
+  // Use the locally installed TypeScript compiler
+  const tscPath = path.join('node_modules', '.bin', 'tsc');
+  
+  if (fs.existsSync(tscPath)) {
+    execSync(`${tscPath} -p tsconfig.build.json`, { stdio: 'inherit' });
+  } else {
+    // Fallback to global tsc
+    execSync('node_modules/typescript/bin/tsc -p tsconfig.build.json', { stdio: 'inherit' });
+  }
   
   console.log('✅ Build completed successfully');
 } catch (error) {
