@@ -75,7 +75,7 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({
         Summary of Your Information
       </Typography>
       <Grid container spacing={2} sx={{ mb: 3 }}>
-        <Grid item xs={6}>
+        <Grid size={6}>
           <Typography variant="body2" color="text.secondary">
             Annual Income
           </Typography>
@@ -83,7 +83,7 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({
             {formatCurrency(userData.grossAnnualIncome || 0)}
           </Typography>
         </Grid>
-        <Grid item xs={6}>
+        <Grid size={6}>
           <Typography variant="body2" color="text.secondary">
             Monthly Debts
           </Typography>
@@ -92,7 +92,7 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({
           </Typography>
         </Grid>
         {userData.purchasePrice && (
-          <Grid item xs={6}>
+          <Grid size={6}>
             <Typography variant="body2" color="text.secondary">
               Purchase Price
             </Typography>
@@ -102,7 +102,7 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({
           </Grid>
         )}
         {userData.downPayment && (
-          <Grid item xs={6}>
+          <Grid size={6}>
             <Typography variant="body2" color="text.secondary">
               Down Payment
             </Typography>
@@ -112,7 +112,7 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({
           </Grid>
         )}
         {userData.propertyValue && (
-          <Grid item xs={6}>
+          <Grid size={6}>
             <Typography variant="body2" color="text.secondary">
               Property Value
             </Typography>
@@ -122,7 +122,7 @@ const ResultsDisplay: React.FC<ResultsDisplayProps> = ({
           </Grid>
         )}
         {userData.desiredLoanAmount && (
-          <Grid item xs={6}>
+          <Grid size={6}>
             <Typography variant="body2" color="text.secondary">
               Desired Loan Amount
             </Typography>

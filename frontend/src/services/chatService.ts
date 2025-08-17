@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { ConversationState, Message } from '../types';
+import type { ConversationState } from '../types';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
@@ -12,7 +12,7 @@ class ChatService {
     withCredentials: true,
   });
 
-  async sendMessage(content: string, state: ConversationState) {
+  async sendMessage(content: string, _state: ConversationState) {
     const response = await this.api.post('/chat/message', {
       content,
     });

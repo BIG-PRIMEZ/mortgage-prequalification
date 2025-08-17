@@ -30,7 +30,7 @@ const VerificationModal: React.FC<VerificationModalProps> = ({
   open,
   onClose,
   onVerified,
-  email,
+  email: _email,
   phone
 }) => {
   const [smsCode, setSmsCode] = useState('');
