@@ -1,3 +1,15 @@
+# Session Configuration Setup
+
+## Important: Fix Cookie/Session Issues
+
+If sessions are resetting between requests (cookie header showing as undefined), add these environment variables to your Render backend:
+
+1. **FRONTEND_URL** - Your Vercel frontend URL (e.g., `https://your-app.vercel.app`)
+2. **SESSION_SECRET** - A secure random string
+3. **NODE_ENV** - Set to `production`
+
+This ensures cookies work properly across different domains.
+
 # Redis Session Store Setup
 
 ## Why Redis is Required

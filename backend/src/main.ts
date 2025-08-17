@@ -14,21 +14,20 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   
   // Enable CORS for frontend-backend communication
-  // origin: true allows any origin (adjust for production)
   // credentials: true enables cookies/sessions across domains
-  app.enableCors({
-    origin: true,
+  const corsOptions = {
+    origin: process.env.NODE_ENV === 'production' 
+      ? process.env.FRONTEND_URL || true  // Use specific frontend URL in production
+      : ['http://localhost:5173', 'http://localhost:3000', 'http://127.0.0.1:5173'],
     credentials: true,
-  });
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    exposedHeaders: ['set-cookie'],
+  };
+  
+  app.enableCors(corsOptions);
 
-  // Enable global validation pipe
-  // whitelist: true strips non-whitelisted properties from DTOs
-  // transform: true enables automatic type transformation
-  app.useGlobalPipes(new ValidationPipe({
-    whitelist: true,
-    transform: true,
-  }));
-
+  // IMPORTANT: Session middleware must be before other middleware
   /**
    * Session configuration for maintaining user state across requests.
    * Uses Redis in production for persistence, in-memory for development.
@@ -46,8 +45,8 @@ async function bootstrap() {
       httpOnly: true,  // Prevent client-side JS access
       secure: process.env.NODE_ENV === 'production',  // HTTPS only in production
       sameSite: process.env.NODE_ENV === 'production' ? 'none' as const : 'lax' as const,  // 'none' required for cross-origin in production
-      domain: process.env.NODE_ENV === 'production' ? undefined : 'localhost',  // Let browser handle domain in production
       path: '/',  // Cookie available for all paths
+      // Remove domain to let browser handle it automatically
     },
     name: 'sessionId',  // Cookie name
   };
@@ -99,6 +98,12 @@ async function bootstrap() {
   }
 
   app.use(session(sessionConfig));
+  
+  // Enable global validation pipe (after session middleware)
+  app.useGlobalPipes(new ValidationPipe({
+    whitelist: true,
+    transform: true,
+  }));
 
   // Start the application
   const port = process.env.PORT || 3000;
