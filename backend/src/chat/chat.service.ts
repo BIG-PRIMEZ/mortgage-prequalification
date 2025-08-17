@@ -102,7 +102,8 @@ IMPORTANT RULES:
       timestamp: new Date(),
     };
     
-    // Emit via WebSocket
+    // Emit via WebSocket to specific client (if we have client ID in session)
+    // For now, just emit normally - the gateway will handle client isolation
     this.chatGateway.sendMessage(agentMessage);
 
     // Check if we need to trigger verification

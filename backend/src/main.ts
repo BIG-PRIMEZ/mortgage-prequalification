@@ -36,12 +36,18 @@ async function bootstrap() {
   let sessionConfig: session.SessionOptions = {
     secret: process.env.SESSION_SECRET || 'mortgage-secret-key',  // Change in production!
     resave: false,  // Don't save session if unmodified
-    saveUninitialized: false,  // Don't create session until data is stored
+    saveUninitialized: true,  // Create session immediately for each client
+    genid: (req) => {
+      // Generate unique session ID for each client
+      return 'sess_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    },
     cookie: {
       maxAge: 3600000,  // 1 hour expiry
       httpOnly: true,  // Prevent client-side JS access
       secure: process.env.NODE_ENV === 'production',  // HTTPS only in production
-      sameSite: 'lax' as const,  // CSRF protection
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' as const : 'lax' as const,  // 'none' required for cross-origin in production
+      domain: process.env.NODE_ENV === 'production' ? undefined : 'localhost',  // Let browser handle domain in production
+      path: '/',  // Cookie available for all paths
     },
     name: 'sessionId',  // Cookie name
   };
