@@ -6,7 +6,8 @@
   "private": true,
   "license": "UNLICENSED",
   "scripts": {
-    "build": "node build-simple.js",
+    "build": "./render-build.sh",
+    "build:js": "node build-simple.js",
     "build:nest": "nest build",
     "build:prod": "tsc -p tsconfig.build.json",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
