@@ -7,29 +7,44 @@ export class ChatController {
   constructor(private readonly chatService: ChatService) {}
 
   @Post('message')
-  async sendMessage(@Body() dto: SendMessageDto, @Session() session: Record<string, any>, @Req() req: any, @Res() res: any) {
+  async sendMessage(@Body() dto: SendMessageDto, @Session() session: Record<string, any>, @Req() req: any) {
     console.log('📍 Session ID:', session.id);
     console.log('📍 Session data keys:', Object.keys(session));
     console.log('🍪 Cookie header:', req.headers.cookie);
     console.log('🌐 Origin:', req.headers.origin);
-    console.log('🔗 Referer:', req.headers.referer);
     console.log('📍 Has existing state?', !!session.conversationState);
     
+    // Process the message
     const result = await this.chatService.processMessage(dto, session);
     
-    // Manually set cookie header for debugging
-    res.setHeader('Access-Control-Allow-Credentials', 'true');
-    res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
+    // Force session save
+    await new Promise<void>((resolve, reject) => {
+      req.session.save((err) => {
+        if (err) {
+          console.error('❌ Session save error:', err);
+          reject(err);
+        } else {
+          console.log('✅ Session saved successfully');
+          resolve();
+        }
+      });
+    });
     
     console.log('📍 Session after processing:', session.conversationState?.phase, 
                 'Fields:', Object.keys(session.conversationState?.collectedData || {}));
     
-    return res.json(result);
+    return result;
   }
 
   @Get('session')
-  async getSession(@Session() session: Record<string, any>) {
-    return session.conversationState || null;
+  async getSession(@Session() session: Record<string, any>, @Req() req: any) {
+    console.log('🔍 GET Session ID:', session.id);
+    console.log('🍪 GET Cookie header:', req.headers.cookie);
+    return {
+      sessionId: session.id,
+      conversationState: session.conversationState || null,
+      hasCookie: !!req.headers.cookie,
+    };
   }
 
   @Post('reset')

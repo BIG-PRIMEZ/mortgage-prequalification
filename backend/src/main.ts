@@ -27,8 +27,7 @@ async function bootstrap() {
       if (process.env.NODE_ENV === 'production') {
         const allowedOrigins = [
           process.env.FRONTEND_URL,
-          'https://mortgage-prequalification-dun.vercel.app', // Add your actual Vercel URL
-          'https://mortgage-prequalification.vercel.app',
+          'https://mortgage-prequalification.vercel.app', // Your actual frontend URL
         ].filter(Boolean);
         
         if (allowedOrigins.includes(origin)) {
