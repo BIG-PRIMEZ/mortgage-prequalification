@@ -8,7 +8,12 @@ export class ChatController {
 
   @Post('message')
   async sendMessage(@Body() dto: SendMessageDto, @Session() session: Record<string, any>) {
-    return this.chatService.processMessage(dto, session);
+    console.log('📍 Session ID:', session.id);
+    console.log('📍 Session data keys:', Object.keys(session));
+    const result = await this.chatService.processMessage(dto, session);
+    console.log('📍 Session after processing:', session.conversationState?.phase, 
+                'Fields:', Object.keys(session.conversationState?.collectedData || {}));
+    return result;
   }
 
   @Get('session')
