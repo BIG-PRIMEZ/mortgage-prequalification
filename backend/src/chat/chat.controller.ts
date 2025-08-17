@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Get, Session } from '@nestjs/common';
+import { Controller, Post, Body, Get, Session, Req } from '@nestjs/common';
 import { ChatService } from './chat.service';
 import { SendMessageDto } from '../shared/dto/send-message.dto';
 
@@ -7,10 +7,14 @@ export class ChatController {
   constructor(private readonly chatService: ChatService) {}
 
   @Post('message')
-  async sendMessage(@Body() dto: SendMessageDto, @Session() session: Record<string, any>) {
+  async sendMessage(@Body() dto: SendMessageDto, @Session() session: Record<string, any>, @Req() req: any) {
     console.log('📍 Session ID:', session.id);
     console.log('📍 Session data keys:', Object.keys(session));
+    console.log('🍪 Cookie header:', req.headers.cookie);
+    console.log('📍 Has existing state?', !!session.conversationState);
+    
     const result = await this.chatService.processMessage(dto, session);
+    
     console.log('📍 Session after processing:', session.conversationState?.phase, 
                 'Fields:', Object.keys(session.conversationState?.collectedData || {}));
     return result;
