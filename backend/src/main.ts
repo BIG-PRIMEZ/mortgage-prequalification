@@ -17,14 +17,34 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   
   // Enable CORS for frontend-backend communication
-  // credentials: true enables cookies/sessions across domains
+  // IMPORTANT: Must set specific origin for cookies to work
   const corsOptions = {
-    origin: process.env.NODE_ENV === 'production' 
-      ? process.env.FRONTEND_URL || true  // Use specific frontend URL in production
-      : ['http://localhost:5173', 'http://localhost:3000', 'http://127.0.0.1:5173'],
+    origin: (origin, callback) => {
+      // Allow requests with no origin (like mobile apps or curl)
+      if (!origin) return callback(null, true);
+      
+      // In production, check against allowed origins
+      if (process.env.NODE_ENV === 'production') {
+        const allowedOrigins = [
+          process.env.FRONTEND_URL,
+          'https://mortgage-prequalification-dun.vercel.app', // Add your actual Vercel URL
+          'https://mortgage-prequalification.vercel.app',
+        ].filter(Boolean);
+        
+        if (allowedOrigins.includes(origin)) {
+          callback(null, true);
+        } else {
+          console.warn(`⚠️ Blocked CORS request from: ${origin}`);
+          callback(new Error('Not allowed by CORS'));
+        }
+      } else {
+        // In development, allow localhost
+        callback(null, true);
+      }
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Cookie'],
     exposedHeaders: ['set-cookie'],
   };
   
@@ -47,9 +67,9 @@ async function bootstrap() {
       maxAge: 3600000,  // 1 hour expiry
       httpOnly: true,  // Prevent client-side JS access
       secure: process.env.NODE_ENV === 'production',  // HTTPS only in production
-      sameSite: process.env.NODE_ENV === 'production' ? 'none' as const : 'lax' as const,  // 'none' required for cross-origin in production
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' as const : 'lax' as const,  // 'none' for cross-site in production
       path: '/',  // Cookie available for all paths
-      // Remove domain to let browser handle it automatically
+      domain: undefined,  // Let browser handle domain
     },
     name: 'sessionId',  // Cookie name
   };
