@@ -2,7 +2,7 @@ services:
   - type: web
     name: mortgage-backend
     runtime: node
-    buildCommand: npm install && npx tsc -p tsconfig.build.json
+    buildCommand: NODE_ENV=development npm install && npm run build && npm prune --production
     startCommand: node dist/main.js
     envVars:
       - key: NODE_ENV
