@@ -44,10 +44,12 @@ export class ChatController {
                 'Fields:', Object.keys(session.conversationState?.collectedData || {}));
     
     // Send session ID in response for client to store
-    res.setHeader('X-Session-Id', session.id);
+    // Use custom session ID if available, otherwise use express session ID
+    const sessionIdToUse = customSessionId || session.id;
+    res.setHeader('X-Session-Id', sessionIdToUse);
     res.json({
       ...result,
-      sessionId: session.id, // Include session ID in response body
+      sessionId: sessionIdToUse, // Include session ID in response body
     });
   }
 

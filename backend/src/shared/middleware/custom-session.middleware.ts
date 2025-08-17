@@ -18,17 +18,17 @@ export class CustomSessionMiddleware implements NestMiddleware {
       // Check if we have stored data for this session
       const storedSession = CustomSessionMiddleware.sessions.get(customSessionId);
       
-      if (storedSession) {
-        // Restore the session data
+      if (storedSession && storedSession.conversationState) {
+        // Restore the session data (without trying to change the ID)
         console.log('📋 Restoring session from store:', customSessionId);
-        console.log('📋 Stored data keys:', Object.keys(storedSession));
+        console.log('📋 Stored phase:', storedSession.conversationState.phase);
         
-        // Override the express session with our stored data
+        // Merge the stored conversation state into the current session
         req.session.conversationState = storedSession.conversationState;
-        req.session.id = customSessionId; // Keep the same ID
-        
-        // Mark as restored
+        req.session.customSessionId = customSessionId; // Store custom ID separately
         req.session.restored = true;
+        
+        console.log('✅ Session restored successfully');
       } else {
         console.log('📋 No stored session for:', customSessionId);
       }
@@ -37,7 +37,8 @@ export class CustomSessionMiddleware implements NestMiddleware {
     // Store session after response
     const originalJson = res.json.bind(res);
     res.json = function(data: any) {
-      const sessionToStore = req.session?.id || customSessionId;
+      // Use custom session ID if available, otherwise use express session ID
+      const sessionToStore = customSessionId || req.session?.id;
       
       if (sessionToStore && req.session?.conversationState) {
         // Store the current session state
