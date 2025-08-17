@@ -198,7 +198,10 @@ IMPORTANT RULES:
     
     // REVALIDATION: Also extract data from AI response
     // This allows the AI to correct values (e.g., "your income is $78,000" corrects user's "80k")
-    const aiExtractedData = this.extractDataFromMessage(aiResponse, currentState.phase, currentState.collectedData);
+    // Skip AI extraction during intent phase to avoid false positives
+    const aiExtractedData = currentState.phase === 'intent' 
+      ? {} 
+      : this.extractDataFromMessage(aiResponse, currentState.phase, currentState.collectedData);
     
     // Merge data with priority: AI extracted data > user extracted data > existing data
     // This ensures AI summaries can correct/update previously collected data

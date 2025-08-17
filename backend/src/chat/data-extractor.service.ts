@@ -240,15 +240,28 @@ export class DataExtractorService {
     console.log(`📝 Original: "${message}"`);
     console.log(`📝 Cleaned: "${cleanedMessage}"`);
     
-    // Extract intent if in intent phase
+    // Extract intent if in intent phase - only from user messages, not questions
     if (phase === 'intent') {
       const lowerMessage = cleanedMessage.toLowerCase();
-      if (lowerMessage.includes('purchase') || lowerMessage.includes('buy') || lowerMessage.includes('buying')) {
-        extracted.intent = 'purchase';
-        console.log(`  ✅ Intent: purchase`);
-      } else if (lowerMessage.includes('refinance') || lowerMessage.includes('refinancing')) {
-        extracted.intent = 'refinance';
-        console.log(`  ✅ Intent: refinance`);
+      // Avoid extracting from questions by checking for question marks
+      const isQuestion = cleanedMessage.includes('?') || lowerMessage.includes('are you looking');
+      
+      if (!isQuestion) {
+        // Look for definitive statements
+        if ((lowerMessage.includes('i want to purchase') || 
+             lowerMessage.includes('i am looking to buy') || 
+             lowerMessage.includes('i want to buy') ||
+             lowerMessage.includes('looking to purchase') ||
+             (lowerMessage.includes('purchase') && !lowerMessage.includes('or refinance')))) {
+          extracted.intent = 'purchase';
+          console.log(`  ✅ Intent: purchase`);
+        } else if ((lowerMessage.includes('i want to refinance') || 
+                    lowerMessage.includes('i am refinancing') || 
+                    lowerMessage.includes('looking to refinance') ||
+                    (lowerMessage.includes('refinance') && !lowerMessage.includes('purchase or')))) {
+          extracted.intent = 'refinance';
+          console.log(`  ✅ Intent: refinance`);
+        }
       }
     }
     
