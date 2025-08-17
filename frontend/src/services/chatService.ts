@@ -11,6 +11,33 @@ class ChatService {
     },
     withCredentials: true,
   });
+  
+  private sessionId: string | null = null;
+
+  constructor() {
+    // Load session ID from localStorage
+    this.sessionId = localStorage.getItem('mortgage-session-id');
+    
+    // Add request interceptor to include session ID
+    this.api.interceptors.request.use((config) => {
+      if (this.sessionId) {
+        config.headers['X-Session-Id'] = this.sessionId;
+      }
+      return config;
+    });
+    
+    // Add response interceptor to save session ID
+    this.api.interceptors.response.use((response) => {
+      // Check for session ID in response
+      const newSessionId = response.data?.sessionId || response.headers['x-session-id'];
+      if (newSessionId && newSessionId !== this.sessionId) {
+        this.sessionId = newSessionId;
+        localStorage.setItem('mortgage-session-id', newSessionId);
+        console.log('📋 Saved new session ID:', newSessionId);
+      }
+      return response;
+    });
+  }
 
   async sendMessage(content: string, _state: ConversationState) {
     const response = await this.api.post('/chat/message', {

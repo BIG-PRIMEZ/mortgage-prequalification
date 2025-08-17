@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, MiddlewareConsumer, NestModule } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -6,6 +6,7 @@ import { ChatModule } from './chat/chat.module';
 import { CalculationModule } from './calculation/calculation.module';
 import { VerificationModule } from './verification/verification.module';
 import { UserModule } from './user/user.module';
+import { CustomSessionMiddleware } from './shared/middleware/custom-session.middleware';
 
 @Module({
   imports: [
@@ -20,4 +21,10 @@ import { UserModule } from './user/user.module';
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer
+      .apply(CustomSessionMiddleware)
+      .forRoutes('*');
+  }
+}

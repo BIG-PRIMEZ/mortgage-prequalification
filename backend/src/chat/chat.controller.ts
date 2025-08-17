@@ -7,8 +7,11 @@ export class ChatController {
   constructor(private readonly chatService: ChatService) {}
 
   @Post('message')
-  async sendMessage(@Body() dto: SendMessageDto, @Session() session: Record<string, any>, @Req() req: any) {
-    console.log('📍 Session ID:', session.id);
+  async sendMessage(@Body() dto: SendMessageDto, @Session() session: Record<string, any>, @Req() req: any, @Res() res: any) {
+    // Check for custom session ID header (fallback for when cookies don't work)
+    const customSessionId = req.headers['x-session-id'];
+    console.log('📍 Custom Session ID from header:', customSessionId);
+    console.log('📍 Express Session ID:', session.id);
     console.log('📍 Session data keys:', Object.keys(session));
     console.log('🍪 Cookie header:', req.headers.cookie);
     console.log('🌐 Origin:', req.headers.origin);
@@ -33,7 +36,12 @@ export class ChatController {
     console.log('📍 Session after processing:', session.conversationState?.phase, 
                 'Fields:', Object.keys(session.conversationState?.collectedData || {}));
     
-    return result;
+    // Send session ID in response for client to store
+    res.setHeader('X-Session-Id', session.id);
+    res.json({
+      ...result,
+      sessionId: session.id, // Include session ID in response body
+    });
   }
 
   @Get('session')
