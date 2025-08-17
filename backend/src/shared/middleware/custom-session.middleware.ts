@@ -10,36 +10,46 @@ export class CustomSessionMiddleware implements NestMiddleware {
   // In-memory session store (replace with Redis/DB in production)
   private static sessions = new Map<string, any>();
 
-  use(req: Request, res: Response, next: NextFunction) {
-    // Try to get session ID from cookie first
-    let sessionId = req.session?.id;
+  use(req: Request & { session: any }, res: Response, next: NextFunction) {
+    const customSessionId = req.headers['x-session-id'] as string;
     
-    // If no cookie session, check custom header
-    if (!sessionId && req.headers['x-session-id']) {
-      sessionId = req.headers['x-session-id'] as string;
+    // If we have a custom session ID from the header
+    if (customSessionId) {
+      // Check if we have stored data for this session
+      const storedSession = CustomSessionMiddleware.sessions.get(customSessionId);
       
-      // Restore session data from our store
-      const storedSession = CustomSessionMiddleware.sessions.get(sessionId);
       if (storedSession) {
-        // Merge stored session with current session
-        Object.assign(req.session, storedSession);
-        req.session.id = sessionId;
-        console.log('📋 Restored session from header:', sessionId);
+        // Restore the session data
+        console.log('📋 Restoring session from store:', customSessionId);
+        console.log('📋 Stored data keys:', Object.keys(storedSession));
+        
+        // Override the express session with our stored data
+        req.session.conversationState = storedSession.conversationState;
+        req.session.id = customSessionId; // Keep the same ID
+        
+        // Mark as restored
+        req.session.restored = true;
+      } else {
+        console.log('📋 No stored session for:', customSessionId);
       }
     }
     
     // Store session after response
-    const originalSend = res.json;
+    const originalJson = res.json.bind(res);
     res.json = function(data: any) {
-      if (req.session?.id) {
-        // Store session data
-        CustomSessionMiddleware.sessions.set(req.session.id, {
-          ...req.session,
-          cookie: undefined, // Don't store cookie object
+      const sessionToStore = req.session?.id || customSessionId;
+      
+      if (sessionToStore && req.session?.conversationState) {
+        // Store the current session state
+        CustomSessionMiddleware.sessions.set(sessionToStore, {
+          conversationState: req.session.conversationState,
+          lastAccess: Date.now(),
         });
-        console.log('💾 Stored session:', req.session.id);
+        console.log('💾 Stored session data:', sessionToStore);
+        console.log('💾 Conversation phase:', req.session.conversationState?.phase);
       }
-      return originalSend.call(this, data);
+      
+      return originalJson(data);
     };
     
     next();

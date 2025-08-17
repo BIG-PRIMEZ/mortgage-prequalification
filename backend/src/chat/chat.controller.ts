@@ -16,6 +16,13 @@ export class ChatController {
     console.log('🍪 Cookie header:', req.headers.cookie);
     console.log('🌐 Origin:', req.headers.origin);
     console.log('📍 Has existing state?', !!session.conversationState);
+    console.log('📍 Session restored?', !!req.session.restored);
+    
+    // If session has conversationState, log its phase
+    if (session.conversationState) {
+      console.log('📍 Current phase:', session.conversationState.phase);
+      console.log('📍 Collected fields:', Object.keys(session.conversationState.collectedData || {}));
+    }
     
     // Process the message
     const result = await this.chatService.processMessage(dto, session);
