@@ -222,9 +222,13 @@ export class DataExtractorService {
         // Pattern explanation: (?:...) is a non-capturing group, \s* matches any whitespace
         // [A-Z][a-z]+ matches a capitalized word, (?:\s+[A-Z][a-z]+)+ matches additional capitalized words
         // Matches: "my name is John Doe", "my full name is Jane Marie Smith", "I am Bob Johnson", "I'm Sarah Lee"
-        /(?:my\s*(?:full\s*)?name\s*is|i\s*am|i'm)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)/,
+        /(?:my\s*(?:full\s*)?name\s*is|i\s*am|i'm)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)/i,
+        // Matches: "My full name is David Thompson"
+        /my\s+full\s+name\s+is\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)/i,
         // Matches: "name: John Doe", "called: Jane Smith"
-        /(?:name|called)\s*:\s*([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)/,
+        /(?:name|called)\s*:\s*([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)/i,
+        // Simple pattern for "Name Surname"
+        /\b([A-Z][a-z]+\s+[A-Z][a-z]+)\b/,
       ],
       postprocessor: (value: string) => value.trim()
     }

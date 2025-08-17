@@ -27,10 +27,14 @@ async function bootstrap() {
       if (process.env.NODE_ENV === 'production') {
         const allowedOrigins = [
           process.env.FRONTEND_URL,
-          'https://mortgage-prequalification.vercel.app', // Your actual frontend URL
+          'https://mortgage-prequalification.vercel.app',
         ].filter(Boolean);
         
-        if (allowedOrigins.includes(origin)) {
+        // Allow Vercel preview deployments
+        const isVercelPreview = origin.includes('vercel.app') && 
+                               origin.includes('mortgage-prequalification');
+        
+        if (allowedOrigins.includes(origin) || isVercelPreview) {
           callback(null, true);
         } else {
           console.warn(`⚠️ Blocked CORS request from: ${origin}`);
