@@ -5,7 +5,9 @@ import session from 'express-session';
 import { RedisStore } from 'connect-redis';
 import { createClient } from 'redis';
 import { PersistentMemoryStore } from './shared/services/persistent-memory-store';
+import { Pool } from 'pg';
 const FileStore = require('session-file-store')(session);
+const pgSession = require('connect-pg-simple')(session);
 
 /**
  * Application bootstrap function.
@@ -54,7 +56,49 @@ async function bootstrap() {
 
   // Configure session storage based on environment
   if (process.env.NODE_ENV === 'production') {
-    if (process.env.REDIS_URL) {
+    // Check for PostgreSQL first (Render provides this)
+    if (process.env.DATABASE_URL) {
+      console.log('🐘 Configuring PostgreSQL session store...');
+      
+      try {
+        const pgPool = new Pool({
+          connectionString: process.env.DATABASE_URL,
+          ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+        });
+        
+        // Test connection
+        await pgPool.query('SELECT NOW()');
+        console.log('✅ PostgreSQL connected successfully');
+        
+        // Create session table if it doesn't exist
+        await pgPool.query(`
+          CREATE TABLE IF NOT EXISTS "session" (
+            "sid" varchar NOT NULL COLLATE "default",
+            "sess" json NOT NULL,
+            "expire" timestamp(6) NOT NULL,
+            CONSTRAINT "session_pkey" PRIMARY KEY ("sid")
+          );
+          CREATE INDEX IF NOT EXISTS "IDX_session_expire" ON "session" ("expire");
+        `);
+        
+        sessionConfig.store = new pgSession({
+          pool: pgPool,
+          tableName: 'session',
+          pruneSessionInterval: 60 * 60, // Prune expired sessions every hour
+        });
+        
+        console.log('✅ PostgreSQL session store configured');
+      } catch (error) {
+        console.error('❌ Failed to configure PostgreSQL sessions:', error);
+        // Fall back to file store
+        sessionConfig.store = new FileStore({
+          path: './sessions',
+          ttl: 3600,
+          retries: 5,
+          secret: sessionConfig.secret,
+        });
+      }
+    } else if (process.env.REDIS_URL) {
       // Use Redis if available
       console.log('🔧 Configuring Redis session store...');
       
@@ -79,27 +123,27 @@ async function bootstrap() {
         console.log('⚠️  Falling back to file-based session store');
         sessionConfig.store = new FileStore({
           path: './sessions',
-          ttl: 3600, // 1 hour
+          ttl: 3600,
           retries: 5,
           secret: sessionConfig.secret,
         });
       }
     } else {
       // Use file-based store as fallback for production without Redis
-      console.log('📁 Using file-based session store (production without Redis)');
+      console.log('📁 Using file-based session store (production without PostgreSQL/Redis)');
       sessionConfig.store = new FileStore({
         path: './sessions',
-        ttl: 3600, // 1 hour
+        ttl: 3600,
         retries: 5,
         secret: sessionConfig.secret,
       });
     }
   } else {
-    // Use persistent memory store for development or when Redis isn't available
+    // Use persistent memory store for development
     console.log('💾 Using persistent in-memory session store');
     sessionConfig.store = new PersistentMemoryStore({
       path: './sessions',
-      saveInterval: 30000, // Save every 30 seconds
+      saveInterval: 30000,
     }) as any;
   }
 
