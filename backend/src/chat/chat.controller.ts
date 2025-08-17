@@ -65,13 +65,30 @@ export class ChatController {
   }
 
   @Post('reset')
-  async resetSession(@Session() session: Record<string, any>) {
+  async resetSession(@Session() session: Record<string, any>, @Req() req: any) {
+    console.log('🔄 Resetting session...');
+    
+    // Get custom session ID if present
+    const customSessionId = req.headers['x-session-id'] || session.customSessionId;
+    
+    // Clear from custom session store if using custom sessions
+    if (customSessionId) {
+      const CustomSessionMiddleware = require('../shared/middleware/custom-session.middleware').CustomSessionMiddleware;
+      const sessions = (CustomSessionMiddleware as any).sessions as Map<string, any>;
+      if (sessions.has(customSessionId)) {
+        sessions.delete(customSessionId);
+        console.log('🗑️ Cleared custom session:', customSessionId);
+      }
+    }
+    
     // Clear conversation state specifically
     delete session.conversationState;
+    delete session.customSessionId;
+    delete session.restored;
     
     // Clear all other session data
     Object.keys(session).forEach(key => {
-      if (key !== 'cookie') { // Don't delete the cookie object itself
+      if (key !== 'cookie' && key !== 'id') { // Don't delete the cookie object or ID
         delete session[key];
       }
     });
