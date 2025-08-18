@@ -33,27 +33,34 @@ const ChatContainer: React.FC = () => {
    * Sets up welcome message and WebSocket connection for real-time messaging.
    */
   useEffect(() => {
-    // Add initial welcome message asking about intent (purchase vs refinance)
-    const welcomeMessage: Message = {
-      id: 'welcome',
-      content: 'Welcome to the Mortgage Pre-Qualification Assistant! Are you looking to purchase a property or refinance an existing mortgage?',
-      sender: 'agent',
-      timestamp: new Date()
-    };
-    setConversationState(prev => ({
-      ...prev,
-      messages: [welcomeMessage]
-    }));
-
-    // Establish WebSocket connection for real-time communication
-    socketService.connect();
-    // Listen for incoming messages from the server
-    socketService.onMessage((message: Message) => {
+    // Initialize session first
+    const initializeChat = async () => {
+      await chatService.initializeSession();
+      
+      // Add initial welcome message asking about intent (purchase vs refinance)
+      const welcomeMessage: Message = {
+        id: 'welcome',
+        content: 'Welcome to the Mortgage Pre-Qualification Assistant! Are you looking to purchase a property or refinance an existing mortgage?',
+        sender: 'agent',
+        timestamp: new Date()
+      };
       setConversationState(prev => ({
         ...prev,
-        messages: [...prev.messages, message]
+        messages: [welcomeMessage]
       }));
-    });
+
+      // Establish WebSocket connection for real-time communication
+      socketService.connect();
+      // Listen for incoming messages from the server
+      socketService.onMessage((message: Message) => {
+        setConversationState(prev => ({
+          ...prev,
+          messages: [...prev.messages, message]
+        }));
+      });
+    };
+    
+    initializeChat();
 
     // Cleanup: disconnect WebSocket when component unmounts
     return () => {

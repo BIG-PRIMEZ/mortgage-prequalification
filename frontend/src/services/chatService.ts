@@ -17,11 +17,18 @@ class ChatService {
 
   constructor() {
     // Load session ID from localStorage
-    this.sessionId = localStorage.getItem('mortgage-session-id');
+    const storedSessionId = localStorage.getItem('mortgage-session-id');
     
-    // Share existing session ID with socket service if available
-    if (this.sessionId) {
+    // Only use stored session ID if it matches the expected format (not test format)
+    const validSessionPattern = /^[a-zA-Z0-9\-_]{20,}$/;
+    if (storedSessionId && validSessionPattern.test(storedSessionId) && !storedSessionId.startsWith('sess_')) {
+      this.sessionId = storedSessionId;
+      // Share existing session ID with socket service if available
       socketService.setSessionId(this.sessionId);
+    } else if (storedSessionId) {
+      // Clear invalid/test session ID
+      console.log('🧹 Clearing invalid/test session ID:', storedSessionId);
+      localStorage.removeItem('mortgage-session-id');
     }
     
     // Add request interceptor to include session ID
@@ -99,6 +106,18 @@ class ChatService {
 
   async resetSession(): Promise<void> {
     await this.api.post('/chat/reset');
+  }
+
+  async initializeSession(): Promise<void> {
+    // Get a fresh session from the server if we don't have one
+    if (!this.sessionId) {
+      try {
+        const response = await this.api.get('/chat/session');
+        console.log('🔄 Initialized new session from server');
+      } catch (error) {
+        console.error('Failed to initialize session:', error);
+      }
+    }
   }
 }
 
