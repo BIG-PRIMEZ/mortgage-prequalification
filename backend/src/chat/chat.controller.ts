@@ -1,31 +1,42 @@
-import { Controller, Post, Body, Get, Session, Req, Res } from '@nestjs/common';
+import { Controller, Post, Body, Get, Session, Req, Res, UseGuards } from '@nestjs/common';
 import { ChatService } from './chat.service';
 import { SendMessageDto } from '../shared/dto/send-message.dto';
+import { HttpRateLimitGuard } from '../shared/guards/http-rate-limit.guard';
 
 @Controller('chat')
 export class ChatController {
   constructor(private readonly chatService: ChatService) {}
 
+  @UseGuards(HttpRateLimitGuard)
   @Post('message')
   async sendMessage(@Body() dto: SendMessageDto, @Session() session: Record<string, any>, @Req() req: any, @Res() res: any) {
-    // Check for custom session ID header (fallback for when cookies don't work)
-    const customSessionId = req.headers['x-session-id'];
-    console.log('📍 Custom Session ID from header:', customSessionId);
-    console.log('📍 Express Session ID:', session.id);
-    console.log('📍 Session data keys:', Object.keys(session));
-    console.log('🍪 Cookie header:', req.headers.cookie);
-    console.log('🌐 Origin:', req.headers.origin);
-    console.log('📍 Has existing state?', !!session.conversationState);
-    console.log('📍 Session restored?', !!req.session.restored);
-    
-    // If session has conversationState, log its phase
-    if (session.conversationState) {
-      console.log('📍 Current phase:', session.conversationState.phase);
-      console.log('📍 Collected fields:', Object.keys(session.conversationState.collectedData || {}));
+    // Log detailed debug info only in development
+    if (process.env.NODE_ENV !== 'production') {
+      const customSessionId = req.headers['x-session-id'] as string;
+      console.log('📍 Custom Session ID from header:', customSessionId);
+      console.log('📍 Express Session ID:', session.id);
+      console.log('📍 Session data keys:', Object.keys(session));
+      console.log('🍪 Cookie header:', req.headers.cookie);
+      console.log('🌐 Origin:', req.headers.origin);
+      console.log('📍 Has existing state?', !!session.conversationState);
+      
+      // If session has conversationState, log its phase
+      if (session.conversationState) {
+        console.log('📍 Current phase:', session.conversationState.phase);
+        console.log('📍 Collected fields:', Object.keys(session.conversationState.collectedData || {}));
+      }
     }
     
-    // Process the message
-    const result = await this.chatService.processMessage(dto, session);
+    // For custom session IDs, we'll use the Express session ID as the stable identifier
+    // The custom session ID helps us identify returning clients, but we still use Express sessions
+    const sessionIdToUse = req.session.id || req.sessionID; // Use req.session.id or req.sessionID
+    
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('📍 Session ID to use:', sessionIdToUse);
+    }
+    
+    // Process the message with session ID for WebSocket routing
+    const result = await this.chatService.processMessage(dto, req.session, sessionIdToUse);
     
     // Force session save
     await new Promise<void>((resolve, reject) => {
@@ -34,31 +45,34 @@ export class ChatController {
           console.error('❌ Session save error:', err);
           reject(err);
         } else {
-          console.log('✅ Session saved successfully');
+          if (process.env.NODE_ENV !== 'production') {
+            console.log('✅ Session saved successfully');
+          }
           resolve();
         }
       });
     });
     
-    console.log('📍 Session after processing:', session.conversationState?.phase, 
-                'Fields:', Object.keys(session.conversationState?.collectedData || {}));
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('📍 Session after processing:', req.session.conversationState?.phase, 
+                  'Fields:', Object.keys(req.session.conversationState?.collectedData || {}));
+    }
     
-    // Send session ID in response for client to store
-    // Use custom session ID if available, otherwise use express session ID
-    const sessionIdToUse = customSessionId || session.id;
+    // Send Express session ID in response for client to store
     res.setHeader('X-Session-Id', sessionIdToUse);
     res.json({
       ...result,
-      sessionId: sessionIdToUse, // Include session ID in response body
+      sessionId: sessionIdToUse, // Always return Express session ID
     });
   }
 
   @Get('session')
   async getSession(@Session() session: Record<string, any>, @Req() req: any) {
-    console.log('🔍 GET Session ID:', session.id);
+    const sessionId = req.session.id || req.sessionID;
+    console.log('🔍 GET Session ID:', sessionId);
     console.log('🍪 GET Cookie header:', req.headers.cookie);
     return {
-      sessionId: session.id,
+      sessionId: sessionId,
       conversationState: session.conversationState || null,
       hasCookie: !!req.headers.cookie,
     };

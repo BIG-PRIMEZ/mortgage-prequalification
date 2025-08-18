@@ -1,5 +1,6 @@
 import axios from 'axios';
 import type { ConversationState } from '../types';
+import { socketService } from './socketService';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
@@ -18,6 +19,11 @@ class ChatService {
     // Load session ID from localStorage
     this.sessionId = localStorage.getItem('mortgage-session-id');
     
+    // Share existing session ID with socket service if available
+    if (this.sessionId) {
+      socketService.setSessionId(this.sessionId);
+    }
+    
     // Add request interceptor to include session ID
     this.api.interceptors.request.use((config) => {
       if (this.sessionId) {
@@ -26,14 +32,22 @@ class ChatService {
       return config;
     });
     
-    // Add response interceptor to save session ID
+    // Add response interceptor to save session ID (only on first response)
     this.api.interceptors.response.use((response) => {
-      // Check for session ID in response
+      // Only update session ID if we don't have one yet (initial session creation)
       const newSessionId = response.data?.sessionId || response.headers['x-session-id'];
-      if (newSessionId && newSessionId !== this.sessionId) {
+      if (newSessionId && !this.sessionId) {
         this.sessionId = newSessionId;
         localStorage.setItem('mortgage-session-id', newSessionId);
-        console.log('📋 Saved new session ID:', newSessionId);
+        console.log('📋 Initial session ID saved:', newSessionId);
+        // Share session ID with socket service
+        socketService.setSessionId(newSessionId);
+      } else if (newSessionId && newSessionId !== this.sessionId) {
+        // Log warning if session ID unexpectedly changes
+        console.warn('⚠️ Session ID changed unexpectedly:', {
+          old: this.sessionId,
+          new: newSessionId
+        });
       }
       return response;
     });

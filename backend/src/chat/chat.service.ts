@@ -59,9 +59,10 @@ IMPORTANT RULES:
    * 
    * @param dto - Contains the user's message content
    * @param session - Express session object storing conversation state
+   * @param sessionId - Session ID for WebSocket message routing
    * @returns Updated conversation state with AI response and any results
    */
-  async processMessage(dto: SendMessageDto, session: Record<string, any>) {
+  async processMessage(dto: SendMessageDto, session: Record<string, any>, sessionId?: string) {
     const { content } = dto;
     
     // Initialize session state if needed - first time user interacts
@@ -101,7 +102,7 @@ IMPORTANT RULES:
       // Check if SMS was already verified via the verify endpoint
       const phone = updatedState.collectedData.phone;
       if (phone) {
-        const isVerified = await this.verificationService.checkIfVerified('sms', phone);
+        const isVerified = await this.verificationService.checkIfVerified('sms', phone, session);
         if (isVerified) {
           console.log('✅ SMS already verified, moving to results');
           updatedState.verificationStatus.sms = true;
@@ -120,9 +121,12 @@ IMPORTANT RULES:
       timestamp: new Date(),
     };
     
-    // Emit via WebSocket to specific client (if we have client ID in session)
-    // For now, just emit normally - the gateway will handle client isolation
-    this.chatGateway.sendMessage(agentMessage);
+    // Send message to specific session if we have session ID
+    if (sessionId) {
+      this.chatGateway.sendMessageToSession(agentMessage, sessionId);
+    } else {
+      console.warn('No session ID provided for WebSocket message routing');
+    }
     
     // Check if we need to trigger verification
     // This happens when all required data is collected and we haven't sent codes yet
@@ -139,6 +143,7 @@ IMPORTANT RULES:
       await this.verificationService.sendVerificationCodes(
         updatedState.collectedData.email,
         updatedState.collectedData.phone,
+        session,
       );
     }
 

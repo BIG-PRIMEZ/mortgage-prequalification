@@ -1,18 +1,20 @@
 import * as fs from 'fs/promises';
 import * as fsSync from 'fs';
 import * as path from 'path';
+import { EventEmitter } from 'events';
 
 /**
  * Simple in-memory session store with file persistence
  * Saves sessions to disk periodically and on shutdown
  */
-export class PersistentMemoryStore {
+export class PersistentMemoryStore extends EventEmitter {
   private sessions: Map<string, any> = new Map();
   private saveInterval: NodeJS.Timeout;
   private sessionsPath: string;
   private isDirty = false;
 
   constructor(options: { path?: string; saveInterval?: number } = {}) {
+    super();
     this.sessionsPath = path.join(options.path || './sessions', 'sessions.json');
     
     // Load existing sessions from disk
@@ -29,6 +31,11 @@ export class PersistentMemoryStore {
     // Save on process exit
     process.on('SIGINT', () => this.shutdown());
     process.on('SIGTERM', () => this.shutdown());
+    
+    // Emit connect event after initialization
+    process.nextTick(() => {
+      this.emit('connect');
+    });
   }
 
   async loadSessions() {
@@ -134,7 +141,42 @@ export class PersistentMemoryStore {
     clearInterval(this.saveInterval);
     this.saveSessions().then(() => {
       console.log('✅ Sessions saved before shutdown');
+      this.emit('disconnect');
       process.exit(0);
     });
+  }
+  
+  // Additional methods that may be expected by express-session
+  all(callback: (err: any, sessions?: any) => void) {
+    const sessions: Record<string, any> = {};
+    this.sessions.forEach((session, sid) => {
+      sessions[sid] = session;
+    });
+    callback(null, sessions);
+  }
+  
+  // Create a new session
+  createSession(req: any, sess: any) {
+    // This is called by express-session to create a new session instance
+    // We need to add the necessary properties and methods
+    sess.cookie = sess.cookie || {};
+    sess.resetMaxAge = function() {
+      if (this.cookie && this.cookie.maxAge) {
+        this.cookie.expires = new Date(Date.now() + this.cookie.maxAge);
+      }
+    };
+    sess.save = function(callback?: (err?: any) => void) {
+      if (callback) callback();
+    };
+    sess.touch = function(callback?: (err?: any) => void) {
+      if (callback) callback();
+    };
+    sess.destroy = function(callback?: (err?: any) => void) {
+      if (callback) callback();
+    };
+    sess.reload = function(callback?: (err?: any) => void) {
+      if (callback) callback();
+    };
+    return sess;
   }
 }

@@ -11,8 +11,6 @@ import { formatPhoneToE164, isValidPhoneNumber } from './phone-formatter';
 @Injectable()
 export class VerificationService {
   private twilioClient: twilio.Twilio;
-  // In-memory storage for verification codes with expiry times
-  private verificationCodes: Map<string, { code: string; expiry: Date }> = new Map();
 
   constructor(private configService: ConfigService) {
     // Initialize Twilio
@@ -48,10 +46,11 @@ export class VerificationService {
    * 
    * @param email - User's email address (stored only)
    * @param phone - User's phone number (SMS sent)
+   * @param session - Express session to store verification codes
    */
-  async sendVerificationCodes(email: string, phone: string) {
+  async sendVerificationCodes(email: string, phone: string, session: Record<string, any>) {
     // Only send SMS verification, skip email
-    await this.sendSMSCode(phone);
+    await this.sendSMSCode(phone, session);
     
     // Store email for records but don't send verification
     console.log('📧 Email stored (no verification required):', email);
@@ -62,31 +61,48 @@ export class VerificationService {
    * Handles phone number formatting and Twilio API integration.
    * 
    * @param phone - Phone number (can be in various formats)
+   * @param session - Express session to store verification code
    * @throws Error if phone number is invalid or SMS fails to send
    */
-  async sendSMSCode(phone: string): Promise<void> {
-    console.log('📱 sendSMSCode called with phone:', phone);
-    console.log('Phone type:', typeof phone);
-    console.log('Phone length:', phone.length);
+  async sendSMSCode(phone: string, session?: Record<string, any>): Promise<void> {
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('📱 sendSMSCode called with phone:', phone);
+      console.log('Phone type:', typeof phone);
+      console.log('Phone length:', phone.length);
+    }
     
     // Validate phone number format
     if (!isValidPhoneNumber(phone)) {
-      console.error('❌ Invalid phone number format:', phone);
+      if (process.env.NODE_ENV !== 'production') {
+        console.error('❌ Invalid phone number format:', phone);
+      } else {
+        console.error('❌ Invalid phone number format');
+      }
       throw new Error('Invalid phone number format');
     }
     
     // Convert to E.164 format required by Twilio (e.g., +2348012345678)
     // Default to Nigerian country code (+234) if not specified
     const formattedPhone = formatPhoneToE164(phone, '+234');
-    console.log('📱 Formatted phone for Twilio:', formattedPhone);
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('📱 Formatted phone for Twilio:', formattedPhone);
+    }
     
     // Generate 6-digit verification code
     const code = this.generateCode();
-    console.log('🔑 Generated code:', code);
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('🔑 Generated code:', code);
+    }
     
-    // Store code with original phone format (for verification matching)
-    this.storeCode(`sms:${phone}`, code);
-    console.log('💾 Stored code with key:', `sms:${phone}`);
+    // Store code in session if provided, otherwise log warning
+    if (session) {
+      this.storeCodeInSession(session, 'sms', phone, code);
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('💾 Stored code in session for phone:', phone);
+      }
+    } else {
+      console.warn('⚠️ No session provided, code not stored persistently');
+    }
     
     // Send SMS via Twilio if configured
     if (this.twilioClient) {
@@ -104,9 +120,10 @@ export class VerificationService {
           console.error('Error code:', error.code);
           console.error('More info:', error.moreInfo);
         }
-        // In development, log the code
-        console.log(`SMS Code for ${phone}: ${code}`);
-        throw new Error(`Failed to send SMS: ${error.message}`);
+        // In development, log the code and don't throw error
+        console.log(`📱 SMS Code for ${phone}: ${code} (Development Mode)`);
+        console.log('⚠️ SMS not sent - Twilio not configured or unreachable');
+        // Don't throw error in development - just log the code
       }
     } else {
       // Development/testing mode - log code to console when Twilio not configured
@@ -115,9 +132,13 @@ export class VerificationService {
     }
   }
 
-  async sendEmailCode(email: string): Promise<void> {
+  async sendEmailCode(email: string, session?: Record<string, any>): Promise<void> {
     const code = this.generateCode();
-    this.storeCode(`email:${email}`, code);
+    
+    // Store code in session if provided
+    if (session) {
+      this.storeCodeInSession(session, 'email', email, code);
+    }
 
     const msg = {
       to: email,
@@ -152,12 +173,17 @@ export class VerificationService {
    * @param type - 'sms' or 'email' verification
    * @param code - The verification code entered by user
    * @param identifier - Phone number or email address
+   * @param session - Express session containing verification codes
    * @returns true if code is valid and not expired
    */
-  async verifyCode(type: 'sms' | 'email', code: string, identifier: string): Promise<boolean> {
-    // Build the key using type and identifier (phone or email)
+  async verifyCode(type: 'sms' | 'email', code: string, identifier: string, session?: Record<string, any>): Promise<boolean> {
+    if (!session || !session.verificationCodes) {
+      console.log('No verification codes in session');
+      return false;
+    }
+
     const key = `${type}:${identifier}`;
-    const storedData = this.verificationCodes.get(key);
+    const storedData = session.verificationCodes[key];
 
     if (!storedData) {
       console.log(`No verification code found for ${key}`);
@@ -165,17 +191,20 @@ export class VerificationService {
     }
 
     // Check if code has expired (10 minute validity)
-    if (storedData.expiry < new Date()) {
+    if (new Date(storedData.expiry) < new Date()) {
       console.log(`⏰ Verification code expired for ${key}`);
-      this.verificationCodes.delete(key); // Clean up expired codes
+      delete session.verificationCodes[key]; // Clean up expired codes
       return false;
     }
 
     const isValid = storedData.code === code;
     if (isValid) {
-      // Mark as verified but keep for checking
-      this.verificationCodes.set(`verified:${key}`, { code: 'verified', expiry: storedData.expiry });
-      this.verificationCodes.delete(key); // Remove the code
+      // Mark as verified in session
+      if (!session.verifiedIdentifiers) {
+        session.verifiedIdentifiers = {};
+      }
+      session.verifiedIdentifiers[key] = true;
+      delete session.verificationCodes[key]; // Remove used code
     }
     
     console.log(`Verification attempt for ${key}: ${isValid ? 'success' : 'failed'}`);
@@ -185,9 +214,13 @@ export class VerificationService {
   /**
    * Check if a phone/email has already been verified
    */
-  async checkIfVerified(type: 'sms' | 'email', identifier: string): Promise<boolean> {
-    const key = `verified:${type}:${identifier}`;
-    const verified = this.verificationCodes.has(key);
+  async checkIfVerified(type: 'sms' | 'email', identifier: string, session?: Record<string, any>): Promise<boolean> {
+    if (!session || !session.verifiedIdentifiers) {
+      return false;
+    }
+    
+    const key = `${type}:${identifier}`;
+    const verified = !!session.verifiedIdentifiers[key];
     console.log(`Checking if ${type}:${identifier} is verified: ${verified}`);
     return verified;
   }
@@ -202,15 +235,23 @@ export class VerificationService {
   }
 
   /**
-   * Stores verification code with expiry time.
+   * Stores verification code in session with expiry time.
    * Codes expire after 10 minutes for security.
    * 
-   * @param key - Storage key (format: "type:identifier")
+   * @param session - Express session object
+   * @param type - 'sms' or 'email'
+   * @param identifier - Phone number or email address
    * @param code - The verification code to store
    */
-  private storeCode(key: string, code: string): void {
+  private storeCodeInSession(session: Record<string, any>, type: 'sms' | 'email', identifier: string, code: string): void {
+    if (!session.verificationCodes) {
+      session.verificationCodes = {};
+    }
+    
     const expiry = new Date();
     expiry.setMinutes(expiry.getMinutes() + 10); // 10 minute expiry
-    this.verificationCodes.set(key, { code, expiry });
+    
+    const key = `${type}:${identifier}`;
+    session.verificationCodes[key] = { code, expiry };
   }
 }

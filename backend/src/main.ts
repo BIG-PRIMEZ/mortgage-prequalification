@@ -1,10 +1,13 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
+import { ConfigService } from '@nestjs/config';
 import session from 'express-session';
 import { RedisStore } from 'connect-redis';
 import { createClient } from 'redis';
 import { PersistentMemoryStore } from './shared/services/persistent-memory-store';
+import { ConfigValidationService } from './shared/services/config-validation.service';
+import { GlobalExceptionFilter } from './shared/filters/global-exception.filter';
 import { Pool } from 'pg';
 const FileStore = require('session-file-store')(session);
 const pgSession = require('connect-pg-simple')(session);
@@ -15,6 +18,18 @@ const pgSession = require('connect-pg-simple')(session);
  */
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  
+  // Validate configuration
+  const configService = app.get(ConfigService);
+  const configValidation = new ConfigValidationService(configService);
+  const validationResult = configValidation.validateConfig();
+  
+  configValidation.logValidationResults(validationResult);
+  
+  if (!validationResult.isValid) {
+    console.error('❌ Application startup failed due to configuration errors');
+    process.exit(1);
+  }
   
   // Enable CORS for frontend-backend communication
   // IMPORTANT: Must set specific origin for cookies to work
@@ -62,10 +77,7 @@ async function bootstrap() {
     secret: process.env.SESSION_SECRET || 'mortgage-secret-key',  // Change in production!
     resave: false,  // Don't save session if unmodified
     saveUninitialized: true,  // Create session immediately for each client
-    genid: (req) => {
-      // Generate unique session ID for each client
-      return 'sess_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-    },
+    // Remove custom genid - let express-session handle it
     cookie: {
       maxAge: 3600000,  // 1 hour expiry
       httpOnly: true,  // Prevent client-side JS access
@@ -162,12 +174,9 @@ async function bootstrap() {
       });
     }
   } else {
-    // Use persistent memory store for development
-    console.log('💾 Using persistent in-memory session store');
-    sessionConfig.store = new PersistentMemoryStore({
-      path: './sessions',
-      saveInterval: 30000,
-    }) as any;
+    // Use built-in memory store for development (sessions won't persist across restarts)
+    console.log('💾 Using built-in memory session store');
+    // Don't set a store - express-session will use the default MemoryStore
   }
 
   app.use(session(sessionConfig));
@@ -177,6 +186,9 @@ async function bootstrap() {
     whitelist: true,
     transform: true,
   }));
+
+  // Enable global exception filter for better error handling
+  app.useGlobalFilters(new GlobalExceptionFilter());
 
   // Start the application
   const port = process.env.PORT || 3000;

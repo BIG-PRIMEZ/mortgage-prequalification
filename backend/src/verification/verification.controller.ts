@@ -13,9 +13,9 @@ export class VerificationController {
     const { email, phone } = session.conversationState?.collectedData || {};
     
     if (body.type === 'sms' && phone) {
-      await this.verificationService.sendSMSCode(phone);
+      await this.verificationService.sendSMSCode(phone, session);
     } else if (body.type === 'email' && email) {
-      await this.verificationService.sendEmailCode(email);
+      await this.verificationService.sendEmailCode(email, session);
     }
 
     return { success: true };
@@ -35,7 +35,7 @@ export class VerificationController {
       return { valid: false, error: `No ${body.type === 'sms' ? 'phone' : 'email'} found in session` };
     }
     
-    const isValid = await this.verificationService.verifyCode(body.type, body.code, identifier);
+    const isValid = await this.verificationService.verifyCode(body.type, body.code, identifier, session);
     
     if (isValid && session.conversationState) {
       session.conversationState.verificationStatus[body.type] = true;
