@@ -94,22 +94,8 @@ IMPORTANT RULES:
       aiResponse,
     );
     
-    session.conversationState = updatedState;
-
-    // Create agent message
-    const agentMessage: Message = {
-      id: (Date.now() + 1).toString(),
-      content: aiResponse,
-      sender: 'agent',
-      timestamp: new Date(),
-    };
-    
-    // Emit via WebSocket to specific client (if we have client ID in session)
-    // For now, just emit normally - the gateway will handle client isolation
-    this.chatGateway.sendMessage(agentMessage);
-
     // Check if user confirmed verification with "Yes" or similar
-    if (currentState.phase === 'verification' && 
+    if (session.conversationState.phase === 'verification' && 
         (content.toLowerCase().includes('yes') || 
          content.toLowerCase().includes('verified'))) {
       // Check if SMS was already verified via the verify endpoint
@@ -123,6 +109,20 @@ IMPORTANT RULES:
         }
       }
     }
+    
+    session.conversationState = updatedState;
+
+    // Create agent message
+    const agentMessage: Message = {
+      id: (Date.now() + 1).toString(),
+      content: aiResponse,
+      sender: 'agent',
+      timestamp: new Date(),
+    };
+    
+    // Emit via WebSocket to specific client (if we have client ID in session)
+    // For now, just emit normally - the gateway will handle client isolation
+    this.chatGateway.sendMessage(agentMessage);
     
     // Check if we need to trigger verification
     // This happens when all required data is collected and we haven't sent codes yet
