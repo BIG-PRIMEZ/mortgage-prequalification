@@ -75,12 +75,6 @@ class ChatService {
   }
 
   async resetSession(): Promise<void> {
-    // Clear the stored session ID
-    this.sessionId = null;
-    localStorage.removeItem('mortgage-session-id');
-    console.log('🔄 Cleared session ID from localStorage');
-    
-    // Call the backend to reset the session
     await this.api.post('/chat/reset');
   }
 }

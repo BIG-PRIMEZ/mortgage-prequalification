@@ -8,7 +8,7 @@ import { Request, Response, NextFunction } from 'express';
 @Injectable()
 export class CustomSessionMiddleware implements NestMiddleware {
   // In-memory session store (replace with Redis/DB in production)
-  static sessions = new Map<string, any>();
+  private static sessions = new Map<string, any>();
 
   use(req: Request & { session: any }, res: Response, next: NextFunction) {
     const customSessionId = req.headers['x-session-id'] as string;
