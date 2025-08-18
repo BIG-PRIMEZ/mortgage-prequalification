@@ -145,8 +145,13 @@ const ChatContainer: React.FC = () => {
       phase: 'results'
     }));
     
-    // Note: Results calculation happens on backend after verification
-    // We don't need to trigger it here - backend sends results automatically
+    // Send a message to trigger results calculation
+    // The backend needs a message to calculate and return results
+    try {
+      await handleSendMessage("Yes, I've verified my phone number");
+    } catch (error) {
+      console.error('Error triggering results calculation:', error);
+    }
   };
   
   /**

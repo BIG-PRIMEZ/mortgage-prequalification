@@ -36,7 +36,9 @@ IMPORTANT RULES:
 - Never skip verification before showing results
 - Format currency amounts properly (e.g., $80,000)
 - Acknowledge each piece of information collected
-- If data is missing, specifically ask for it`;
+- If data is missing, specifically ask for it
+- After showing results, if the user mentions "purchase" or "refinance" again, they want to start a new application
+- In the results phase, offer to help with a new application if they ask`;
 
   constructor(
     private configService: ConfigService,
@@ -106,6 +108,22 @@ IMPORTANT RULES:
     // For now, just emit normally - the gateway will handle client isolation
     this.chatGateway.sendMessage(agentMessage);
 
+    // Check if user confirmed verification with "Yes" or similar
+    if (currentState.phase === 'verification' && 
+        (content.toLowerCase().includes('yes') || 
+         content.toLowerCase().includes('verified'))) {
+      // Check if SMS was already verified via the verify endpoint
+      const phone = updatedState.collectedData.phone;
+      if (phone) {
+        const isVerified = await this.verificationService.checkIfVerified('sms', phone);
+        if (isVerified) {
+          console.log('✅ SMS already verified, moving to results');
+          updatedState.verificationStatus.sms = true;
+          updatedState.phase = 'results';
+        }
+      }
+    }
+    
     // Check if we need to trigger verification
     // This happens when all required data is collected and we haven't sent codes yet
     if (updatedState.phase === 'verification' && 
@@ -192,6 +210,23 @@ IMPORTANT RULES:
     userMessage: string,
     aiResponse: string,
   ): Promise<ConversationState> {
+    // Check if user is trying to start a new conversation while in results phase
+    if (currentState.phase === 'results') {
+      const lowerMessage = userMessage.toLowerCase();
+      // If user mentions purchase/refinance or asks to start over, reset the conversation
+      if (lowerMessage.includes('purchase') || lowerMessage.includes('refinance') || 
+          lowerMessage.includes('start over') || lowerMessage.includes('new')) {
+        console.log('🔄 Detected restart intent in results phase, resetting conversation');
+        return {
+          phase: 'intent',
+          intent: null,
+          collectedData: {},
+          verificationStatus: { sms: false, email: false },
+          messages: currentState.messages, // Keep message history
+        };
+      }
+    }
+    
     // Extract data from user message based on current phase
     const extractedData = this.extractDataFromMessage(userMessage, currentState.phase, currentState.collectedData);
     

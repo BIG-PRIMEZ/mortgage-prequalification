@@ -18,6 +18,12 @@ export class DataExtractorService {
     {
       field: 'grossAnnualIncome',
       patterns: [
+        // Natural sentence patterns
+        // "I make about 80k a year working as a software engineer"
+        /\b(?:I|i)\s+(?:make|earn|get|receive)\s+(?:about|around|approximately|roughly)?\s*\$?(\d+k)\s*(?:a\s+year|annually|per\s+year)?/i,
+        // "My salary is 80,000 dollars per year"
+        /\b(?:my|My)\s+(?:salary|income|pay)\s+(?:is|equals|totals)\s+(?:about|around|approximately)?\s*\$?(\d+(?:,\d{3})*(?:\.\d{2})?)\s*(?:dollars?)?\s*(?:per\s+year|annually|a\s+year)?/i,
+        
         // Handle "k" notation first (e.g., "80k", "$80k")
         // Matches: "income is 80k", "salary of $80k", "I earn 80k", "I make $80k"
         /(?:income|salary|earn|make)\s*(?:is|of)?\s*\$?(\d+k)/i,
@@ -37,6 +43,12 @@ export class DataExtractorService {
         /earn\s+\$?(\d+(?:,\d{3})*(?:\.\d{2})?)\s*(?:a year|per year)?/i,
         // Matches: "make $80,000 a year", "make 80000 per year"
         /make\s+\$?(\d+(?:,\d{3})*(?:\.\d{2})?)\s*(?:a year|per year)?/i,
+        
+        // More flexible patterns for sentences
+        // "I work as a teacher and earn 65000 annually"
+        /\b(?:and|,)?\s*(?:I|i)?\s*(?:earn|make|get|receive)\s+\$?(\d+(?:,\d{3})*(?:\.\d{2})?)\s*(?:annually|yearly|per\s+year|a\s+year)?/i,
+        // "My annual gross income is approximately $92,000"
+        /annual\s+gross\s+income\s+is\s+(?:approximately|about|around)?\s*\$?(\d+(?:,\d{3})*(?:\.\d{2})?)/i,
       ],
       postprocessor: (value: string) => {
         // Handle "k" notation
@@ -51,6 +63,15 @@ export class DataExtractorService {
     {
       field: 'monthlyDebts',
       patterns: [
+        // Natural sentence patterns for debts
+        // "I pay about $600 a month for all my debts"
+        /\b(?:I|i)\s+(?:pay|owe|have)\s+(?:about|around|approximately)?\s*\$?(\d+(?:,\d{3})*(?:\.\d{2})?)\s*(?:a\s+month|monthly|per\s+month)\s+(?:for|in)?\s*(?:all\s+)?(?:my\s+)?(?:debts?|loans?|obligations?)/i,
+        // "My total monthly payments come to $600"
+        /\b(?:my|My)\s+(?:total\s+)?monthly\s+(?:debt\s+)?(?:payments?|obligations?)\s+(?:come\s+to|are|total|equal)\s+(?:about|around|approximately)?\s*\$?(\d+(?:,\d{3})*(?:\.\d{2})?)/i,
+        
+        // NEW: Matches "My monthly debt payments total $600"
+        /monthly\s+debt\s+payments?\s+total\s+\$?(\d+(?:,\d{3})*(?:\.\d{2})?)/i,
+        
         // Standard patterns
         // Matches: "monthly debt obligations are $450", "monthly debt obligations is $450"
         /(?:monthly\s*debt\s*obligations?)\s*(?:are|is)?\s*\$?(\d+(?:,\d{3})*(?:\.\d{2})?)/i,
@@ -78,6 +99,12 @@ export class DataExtractorService {
     {
       field: 'purchasePrice',
       patterns: [
+        // Natural sentence patterns for purchase price
+        // "I'm looking at a house that costs around $320,000"
+        /\b(?:I'm|i'm|I\s+am)\s+(?:looking\s+at|considering|interested\s+in)\s+(?:a|an)\s+(?:house|home|property|condo|apartment)\s+(?:that\s+)?(?:costs?|priced\s+at)\s+(?:about|around|approximately)?\s*\$?(\d+(?:,\d{3})*(?:\.\d{2})?)/i,
+        // "The home I want to buy is listed at $320,000"
+        /(?:home|house|property|place)\s+(?:I|i)\s+(?:want\s+to\s+)?(?:buy|purchase)\s+(?:is\s+)?(?:listed\s+at|priced\s+at|costs?)\s+(?:about|around)?\s*\$?(\d+(?:,\d{3})*(?:\.\d{2})?)/i,
+        
         // Handle "k" notation first
         /purchase\s*price\s*(?:is|of)?\s*\$?(\d+k)/i,
         /(?:home|house|property)\s*(?:costs?|price)\s*\$?(\d+k)/i,
@@ -109,6 +136,14 @@ export class DataExtractorService {
     {
       field: 'downPayment',
       patterns: [
+        // Natural sentence patterns for down payment
+        // "I have saved about $25,000 for the down payment"
+        /\b(?:I|i)\s+(?:have|'ve|has)\s+(?:saved|got|accumulated)\s+(?:about|around|approximately)?\s*\$?(\d+(?:,\d{3})*(?:\.\d{2})?)\s+(?:for\s+)?(?:the\s+)?down\s*payment/i,
+        // "I can put down $25,000"
+        /\b(?:I|i)\s+(?:can|could|will)\s+(?:put\s+)?down\s+(?:about|around|approximately)?\s*\$?(\d+(?:,\d{3})*(?:\.\d{2})?)/i,
+        // "My down payment will be $25,000"
+        /\b(?:my|My)\s+down\s*payment\s+(?:will\s+be|is|equals)\s+(?:about|around|approximately)?\s*\$?(\d+(?:,\d{3})*(?:\.\d{2})?)/i,
+        
         // Handle "k" notation first
         /(?:have|saved)\s*\$?(\d+k)\s*(?:for\s*)?down/i,
         /down\s*payment\s*\$?(\d+k)/i,
@@ -219,6 +254,12 @@ export class DataExtractorService {
     {
       field: 'fullName',
       patterns: [
+        // Natural sentence patterns for names
+        // "You can call me John Doe"
+        /\b(?:you\s+can\s+)?call\s+me\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)/i,
+        // "I go by John Doe"
+        /\b(?:I|i)\s+go\s+by\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)/i,
+        
         // Pattern explanation: (?:...) is a non-capturing group, \s* matches any whitespace
         // [A-Z][a-z]+ matches a capitalized word, (?:\s+[A-Z][a-z]+)+ matches additional capitalized words
         // Matches: "my name is John Doe", "my full name is Jane Marie Smith", "I am Bob Johnson", "I'm Sarah Lee"
@@ -227,8 +268,10 @@ export class DataExtractorService {
         /my\s+full\s+name\s+is\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)/i,
         // Matches: "name: John Doe", "called: Jane Smith"
         /(?:name|called)\s*:\s*([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)/i,
-        // Simple pattern for "Name Surname"
-        /\b([A-Z][a-z]+\s+[A-Z][a-z]+)\b/,
+        // Handle names with punctuation: "It's John Doe"
+        /\b(?:It's|it's|Its|its)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)/i,
+        // Simple pattern for "Name Surname" - but only at start of sentence or after punctuation
+        /(?:^|[.!?]\s*)([A-Z][a-z]+\s+[A-Z][a-z]+)(?:\s*[,.]|$)/,
       ],
       postprocessor: (value: string) => value.trim()
     }

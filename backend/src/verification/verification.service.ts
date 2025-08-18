@@ -173,11 +173,23 @@ export class VerificationService {
 
     const isValid = storedData.code === code;
     if (isValid) {
-      this.verificationCodes.delete(key); // Remove used code
+      // Mark as verified but keep for checking
+      this.verificationCodes.set(`verified:${key}`, { code: 'verified', expiry: storedData.expiry });
+      this.verificationCodes.delete(key); // Remove the code
     }
     
     console.log(`Verification attempt for ${key}: ${isValid ? 'success' : 'failed'}`);
     return isValid;
+  }
+  
+  /**
+   * Check if a phone/email has already been verified
+   */
+  async checkIfVerified(type: 'sms' | 'email', identifier: string): Promise<boolean> {
+    const key = `verified:${type}:${identifier}`;
+    const verified = this.verificationCodes.has(key);
+    console.log(`Checking if ${type}:${identifier} is verified: ${verified}`);
+    return verified;
   }
 
   /**
