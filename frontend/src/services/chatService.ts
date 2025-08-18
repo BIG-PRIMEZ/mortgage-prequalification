@@ -32,23 +32,32 @@ class ChatService {
       return config;
     });
     
-    // Add response interceptor to save session ID (only on first response)
+    // Add response interceptor to save session ID
     this.api.interceptors.response.use((response) => {
-      // Only update session ID if we don't have one yet (initial session creation)
       const newSessionId = response.data?.sessionId || response.headers['x-session-id'];
-      if (newSessionId && !this.sessionId) {
-        this.sessionId = newSessionId;
-        localStorage.setItem('mortgage-session-id', newSessionId);
-        console.log('📋 Initial session ID saved:', newSessionId);
-        // Share session ID with socket service
-        socketService.setSessionId(newSessionId);
-      } else if (newSessionId && newSessionId !== this.sessionId) {
-        // Log warning if session ID unexpectedly changes
-        console.warn('⚠️ Session ID changed unexpectedly:', {
-          old: this.sessionId,
-          new: newSessionId
-        });
+      
+      if (newSessionId) {
+        if (!this.sessionId) {
+          // Initial session creation
+          this.sessionId = newSessionId;
+          localStorage.setItem('mortgage-session-id', newSessionId);
+          console.log('📋 Initial session ID saved:', newSessionId);
+          // Share session ID with socket service
+          socketService.setSessionId(newSessionId);
+        } else if (newSessionId !== this.sessionId) {
+          // Session ID actually changed (this should be rare)
+          console.warn('⚠️ Session ID changed unexpectedly:', {
+            old: this.sessionId,
+            new: newSessionId
+          });
+          // Update to new session ID
+          this.sessionId = newSessionId;
+          localStorage.setItem('mortgage-session-id', newSessionId);
+          socketService.setSessionId(newSessionId);
+        }
+        // If newSessionId === this.sessionId, do nothing (expected case)
       }
+      
       return response;
     });
   }
