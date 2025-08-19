@@ -112,7 +112,7 @@ class ChatService {
     // Get a fresh session from the server if we don't have one
     if (!this.sessionId) {
       try {
-        const response = await this.api.get('/chat/session');
+        await this.api.get('/chat/session');
         console.log('🔄 Initialized new session from server');
       } catch (error) {
         console.error('Failed to initialize session:', error);
