@@ -19,6 +19,9 @@ const pgSession = require('connect-pg-simple')(expressSession);
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   
+  // Trust proxy (required for production environments like Render/Vercel)
+  app.set('trust proxy', true);
+  
   // Validate configuration
   const configService = app.get(ConfigService);
   const configValidation = new ConfigValidationService(configService);
@@ -78,13 +81,14 @@ async function bootstrap() {
     resave: false,  // Don't save session if unmodified
     saveUninitialized: true,  // Create session immediately to prevent ID changes
     rolling: true,  // Reset cookie expiry on each request with session
+    proxy: process.env.NODE_ENV === 'production',  // Trust proxy in production
     cookie: {
       maxAge: 3600000,  // 1 hour expiry
       httpOnly: true,  // Prevent client-side JS access
       secure: process.env.NODE_ENV === 'production',  // HTTPS only in production
       sameSite: process.env.NODE_ENV === 'production' ? 'none' as const : 'lax' as const,  // 'none' for cross-site in production
       path: '/',  // Cookie available for all paths
-      domain: undefined,  // Let browser handle domain
+      domain: process.env.COOKIE_DOMAIN || undefined,  // Optional explicit domain
     },
     name: 'sessionId',  // Cookie name
   };
@@ -120,6 +124,9 @@ async function bootstrap() {
           pool: pgPool,
           tableName: 'session',
           pruneSessionInterval: 60 * 60, // Prune expired sessions every hour
+          errorLog: (err) => {
+            console.error('PostgreSQL session store error:', err);
+          },
         });
         
         console.log('✅ PostgreSQL session store configured');
