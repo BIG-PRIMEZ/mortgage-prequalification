@@ -2,7 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
 import { ConfigService } from '@nestjs/config';
-import session from 'express-session';
+import * as session from 'express-session';
 import { RedisStore } from 'connect-redis';
 import { createClient } from 'redis';
 import { PersistentMemoryStore } from './shared/services/persistent-memory-store';
