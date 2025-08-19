@@ -37,9 +37,12 @@ class ChatService {
     
     // Add response interceptor to save session ID
     this.api.interceptors.response.use((response) => {
-      const newSessionId = response.data?.sessionId || response.headers['x-session-id'];
+      // Try to get session ID from response body first, then headers
+      const responseSessionId = response.data?.sessionId;
+      const headerSessionId = response.headers['x-session-id'];
+      const newSessionId = responseSessionId || headerSessionId;
       
-      if (newSessionId) {
+      if (newSessionId && newSessionId !== this.sessionId) {
         if (!this.sessionId) {
           // Initial session creation
           this.sessionId = newSessionId;
@@ -47,18 +50,19 @@ class ChatService {
           console.log('📋 Initial session ID saved:', newSessionId);
           // Share session ID with socket service
           socketService.setSessionId(newSessionId);
-        } else if (newSessionId !== this.sessionId) {
+        } else {
           // Session ID actually changed (this should be rare)
           console.warn('⚠️ Session ID changed unexpectedly:', {
             old: this.sessionId,
-            new: newSessionId
+            new: newSessionId,
+            fromBody: !!responseSessionId,
+            fromHeader: !!headerSessionId
           });
           // Update to new session ID
           this.sessionId = newSessionId;
           localStorage.setItem('mortgage-session-id', newSessionId);
           socketService.setSessionId(newSessionId);
         }
-        // If newSessionId === this.sessionId, do nothing (expected case)
       }
       
       return response;

@@ -82,6 +82,11 @@ async function bootstrap() {
     resave: false,  // Don't save session if unmodified
     saveUninitialized: true,  // Create session immediately to prevent ID changes
     rolling: true,  // Reset cookie expiry on each request with session
+    genid: (req) => {
+      // Generate consistent session IDs
+      const crypto = require('crypto');
+      return crypto.randomBytes(16).toString('hex');
+    },
     proxy: process.env.NODE_ENV === 'production',  // Trust proxy in production
     cookie: {
       maxAge: 3600000,  // 1 hour expiry

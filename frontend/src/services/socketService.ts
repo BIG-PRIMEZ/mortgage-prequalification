@@ -8,9 +8,15 @@ class SocketService {
   private sessionId: string | null = null;
 
   setSessionId(sessionId: string) {
+    // Don't re-register if we already have this session ID
+    if (this.sessionId === sessionId) {
+      return;
+    }
+    
     this.sessionId = sessionId || null;
     // If already connected and session ID is provided, register it
     if (this.socket?.connected && sessionId) {
+      console.log('🔌 Registering WebSocket with session:', sessionId);
       this.socket.emit('register-session', { sessionId });
     }
   }

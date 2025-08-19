@@ -10,11 +10,14 @@ export class ChatController {
   @UseGuards(HttpRateLimitGuard)
   @Post('message')
   async sendMessage(@Body() dto: SendMessageDto, @Session() session: Record<string, any>, @Req() req: any, @Res() res: any) {
+    // Capture session ID at the start
+    const initialSessionId = req.sessionID;
+    
     // Log detailed debug info only in development
     if (process.env.NODE_ENV !== 'production') {
       const customSessionId = req.headers['x-session-id'] as string;
       console.log('📍 Custom Session ID from header:', customSessionId);
-      console.log('📍 Express Session ID:', req.sessionID);
+      console.log('📍 Express Session ID at start:', initialSessionId);
       console.log('📍 Session data keys:', Object.keys(session));
       console.log('🍪 Cookie header:', req.headers.cookie);
       console.log('🌐 Origin:', req.headers.origin);
@@ -29,11 +32,18 @@ export class ChatController {
     
     // For custom session IDs, we'll use the Express session ID as the stable identifier
     // The custom session ID helps us identify returning clients, but we still use Express sessions
-    // IMPORTANT: Always use req.sessionID (not req.session.id) for consistency
-    const sessionIdToUse = req.sessionID;
+    // Use the initial session ID captured at the start to ensure consistency
+    const sessionIdToUse = initialSessionId;
     
     if (process.env.NODE_ENV !== 'production') {
       console.log('📍 Session ID to use:', sessionIdToUse);
+      console.log('📍 Session ID now:', req.sessionID);
+      if (sessionIdToUse !== req.sessionID) {
+        console.warn('⚠️ Session ID changed during request!', {
+          initial: sessionIdToUse,
+          current: req.sessionID
+        });
+      }
     }
     
     // Process the message with session ID for WebSocket routing
@@ -57,13 +67,20 @@ export class ChatController {
     if (process.env.NODE_ENV !== 'production') {
       console.log('📍 Session after processing:', req.session.conversationState?.phase, 
                   'Fields:', Object.keys(req.session.conversationState?.collectedData || {}));
+      console.log('📍 Final session ID check:', req.sessionID);
+      if (initialSessionId !== req.sessionID) {
+        console.error('❌ Session ID changed during processing!', {
+          initial: initialSessionId,
+          final: req.sessionID
+        });
+      }
     }
     
-    // Send Express session ID in response for client to store
+    // Send the INITIAL session ID in response to maintain consistency
     res.setHeader('X-Session-Id', sessionIdToUse);
     res.json({
       ...result,
-      sessionId: sessionIdToUse, // Always return Express session ID
+      sessionId: sessionIdToUse, // Always return the initial session ID
     });
   }
 
