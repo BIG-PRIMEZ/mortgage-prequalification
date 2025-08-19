@@ -19,8 +19,9 @@ const pgSession = require('connect-pg-simple')(expressSession);
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   
-  // Trust proxy (required for production environments like Render/Vercel)
-  app.set('trust proxy', true);
+  // Get the underlying Express app and trust proxy (required for production environments)
+  const expressApp = app.getHttpAdapter().getInstance();
+  expressApp.set('trust proxy', true);
   
   // Validate configuration
   const configService = app.get(ConfigService);
