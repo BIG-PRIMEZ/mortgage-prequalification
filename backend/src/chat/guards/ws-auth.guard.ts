@@ -32,12 +32,15 @@ export class WsAuthGuard implements CanActivate {
   
   /**
    * Validates session ID format
-   * Express session IDs are alphanumeric strings with hyphens and underscores
+   * Express session IDs can have various formats depending on configuration
    */
   private isValidSessionId(sessionId: string): boolean {
-    // Accept standard Express session ID format
-    // Example: llrmVFWyPmq0-ZFNcogNTXRdq3ZaAz1A
-    const sessionPattern = /^[a-zA-Z0-9\-_]{20,}$/;
-    return sessionPattern.test(sessionId);
+    // Accept any non-empty string as valid session ID
+    // Express can generate IDs in different formats: with dots, colons, etc.
+    // Example formats:
+    // - llrmVFWyPmq0-ZFNcogNTXRdq3ZaAz1A
+    // - s:llrmVFWyPmq0-ZFNcogNTXRdq3ZaAz1A.signature
+    // - sess_1234567890abcdef
+    return sessionId && sessionId.length > 0;
   }
 }

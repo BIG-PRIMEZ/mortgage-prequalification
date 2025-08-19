@@ -19,16 +19,12 @@ class ChatService {
     // Load session ID from localStorage
     const storedSessionId = localStorage.getItem('mortgage-session-id');
     
-    // Only use stored session ID if it matches the expected format (not test format)
-    const validSessionPattern = /^[a-zA-Z0-9\-_]{20,}$/;
-    if (storedSessionId && validSessionPattern.test(storedSessionId) && !storedSessionId.startsWith('sess_')) {
+    // Accept any session ID from the backend - Express generates various formats
+    if (storedSessionId) {
       this.sessionId = storedSessionId;
       // Share existing session ID with socket service if available
       socketService.setSessionId(this.sessionId);
-    } else if (storedSessionId) {
-      // Clear invalid/test session ID
-      console.log('🧹 Clearing invalid/test session ID:', storedSessionId);
-      localStorage.removeItem('mortgage-session-id');
+      console.log('📋 Loaded existing session ID:', storedSessionId);
     }
     
     // Add request interceptor to include session ID

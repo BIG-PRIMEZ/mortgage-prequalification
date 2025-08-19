@@ -62,9 +62,8 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
         return next(new Error('Authentication failed: No session ID'));
       }
       
-      // Validate session ID format (standard Express format)
-      const sessionPattern = /^[a-zA-Z0-9\-_]{20,}$/;
-      if (!sessionPattern.test(sessionId)) {
+      // Accept any non-empty session ID - Express formats vary
+      if (!sessionId || sessionId.length === 0) {
         return next(new Error('Authentication failed: Invalid session ID'));
       }
       
@@ -117,10 +116,9 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
   handleRegisterSession(client: Socket, payload: { sessionId: string }) {
     const { sessionId } = payload;
     if (sessionId) {
-      // Validate that the new session ID matches expected format
-      const sessionPattern = /^[a-zA-Z0-9\-_]{20,}$/;
-      if (!sessionPattern.test(sessionId)) {
-        client.emit('error', { message: 'Invalid session ID format' });
+      // Accept any non-empty session ID
+      if (!sessionId || sessionId.length === 0) {
+        client.emit('error', { message: 'Invalid session ID' });
         return;
       }
       
