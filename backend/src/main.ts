@@ -2,13 +2,13 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
 import { ConfigService } from '@nestjs/config';
-import * as session from 'express-session';
 import { RedisStore } from 'connect-redis';
 import { createClient } from 'redis';
 import { PersistentMemoryStore } from './shared/services/persistent-memory-store';
 import { ConfigValidationService } from './shared/services/config-validation.service';
 import { GlobalExceptionFilter } from './shared/filters/global-exception.filter';
 import { Pool } from 'pg';
+const session = require('express-session');
 const FileStore = require('session-file-store')(session);
 const pgSession = require('connect-pg-simple')(session);
 
