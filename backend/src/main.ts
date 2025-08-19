@@ -76,8 +76,8 @@ async function bootstrap() {
   let sessionConfig: session.SessionOptions = {
     secret: process.env.SESSION_SECRET || 'mortgage-secret-key',  // Change in production!
     resave: false,  // Don't save session if unmodified
-    saveUninitialized: true,  // Create session immediately for each client
-    // Remove custom genid - let express-session handle it
+    saveUninitialized: false,  // Don't create session until we store data
+    rolling: true,  // Reset cookie expiry on each request with session
     cookie: {
       maxAge: 3600000,  // 1 hour expiry
       httpOnly: true,  // Prevent client-side JS access
