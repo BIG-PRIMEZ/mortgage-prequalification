@@ -33,27 +33,17 @@ const ChatContainer: React.FC = () => {
    * Sets up welcome message and WebSocket connection for real-time messaging.
    */
   useEffect(() => {
-    // Clear session on page reload
+    // Always clear conversation data on page load/reload
     const clearSessionAndInitialize = async () => {
-      // Only reset if this is a fresh page load (not a React re-render)
-      const isPageReload = !sessionStorage.getItem('chat-initialized');
-      
-      if (isPageReload) {
-        // Mark that we've initialized to prevent multiple resets
-        sessionStorage.setItem('chat-initialized', 'true');
-        
-        // Clear localStorage
-        localStorage.removeItem('mortgage-session-id');
-        
-        // Reset session on backend
-        try {
-          await chatService.resetSession();
-        } catch (error) {
-          console.error('Error resetting session:', error);
-        }
+      // Reset conversation data on backend (keeps session ID)
+      try {
+        await chatService.resetSession();
+        console.log('✅ Conversation data cleared on page load');
+      } catch (error) {
+        console.error('Error resetting conversation:', error);
       }
       
-      // Initialize session (will use existing or create new)
+      // Initialize session (will use existing session ID)
       await chatService.initializeSession();
       
       // Add initial welcome message asking about intent (purchase vs refinance)
@@ -69,8 +59,7 @@ const ChatContainer: React.FC = () => {
       }));
 
       // Establish WebSocket connection for real-time communication
-      // Reconnect if we reset the session
-      if (!socketService.isConnected() || isPageReload) {
+      if (!socketService.isConnected()) {
         socketService.connect();
       }
       // Listen for incoming messages from the server
@@ -87,6 +76,23 @@ const ChatContainer: React.FC = () => {
     // Cleanup: disconnect WebSocket when component unmounts
     return () => {
       socketService.disconnect();
+    };
+  }, []);
+
+  /**
+   * Clear conversation state on page unload/reload.
+   * This ensures fresh start even if the page is refreshed.
+   */
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      // Mark that we need to clear data on next load
+      sessionStorage.removeItem('chat-initialized');
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
     };
   }, []);
 
