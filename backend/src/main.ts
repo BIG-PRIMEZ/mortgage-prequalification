@@ -8,9 +8,9 @@ import { PersistentMemoryStore } from './shared/services/persistent-memory-store
 import { ConfigValidationService } from './shared/services/config-validation.service';
 import { GlobalExceptionFilter } from './shared/filters/global-exception.filter';
 import { Pool } from 'pg';
-const session = require('express-session');
-const FileStore = require('session-file-store')(session);
-const pgSession = require('connect-pg-simple')(session);
+const expressSession = require('express-session');
+const FileStore = require('session-file-store')(expressSession);
+const pgSession = require('connect-pg-simple')(expressSession);
 
 /**
  * Application bootstrap function.
@@ -73,7 +73,7 @@ async function bootstrap() {
    * Session configuration for maintaining user state across requests.
    * Uses Redis in production for persistence, in-memory for development.
    */
-  let sessionConfig: session.SessionOptions = {
+  let sessionConfig: any = {
     secret: process.env.SESSION_SECRET || 'mortgage-secret-key',  // Change in production!
     resave: false,  // Don't save session if unmodified
     saveUninitialized: false,  // Don't create session until we store data
@@ -179,7 +179,7 @@ async function bootstrap() {
     // Don't set a store - express-session will use the default MemoryStore
   }
 
-  app.use(session(sessionConfig));
+  app.use(expressSession(sessionConfig));
   
   // Enable global validation pipe (after session middleware)
   app.useGlobalPipes(new ValidationPipe({
