@@ -10,16 +10,11 @@ export class ChatController {
   @UseGuards(HttpRateLimitGuard)
   @Post('message')
   async sendMessage(@Body() dto: SendMessageDto, @Session() session: Record<string, any>, @Req() req: any, @Res() res: any) {
-    // Ensure session is initialized (since saveUninitialized is false)
-    if (!req.session.initialized) {
-      req.session.initialized = true;
-      req.session.createdAt = Date.now();
-    }
     // Log detailed debug info only in development
     if (process.env.NODE_ENV !== 'production') {
       const customSessionId = req.headers['x-session-id'] as string;
       console.log('📍 Custom Session ID from header:', customSessionId);
-      console.log('📍 Express Session ID:', session.id);
+      console.log('📍 Express Session ID:', req.sessionID);
       console.log('📍 Session data keys:', Object.keys(session));
       console.log('🍪 Cookie header:', req.headers.cookie);
       console.log('🌐 Origin:', req.headers.origin);
@@ -78,6 +73,7 @@ export class ChatController {
     const sessionId = req.sessionID;
     console.log('🔍 GET Session ID:', sessionId);
     console.log('🍪 GET Cookie header:', req.headers.cookie);
+    
     return {
       sessionId: sessionId,
       conversationState: session.conversationState || null,
