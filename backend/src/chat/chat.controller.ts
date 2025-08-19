@@ -12,11 +12,11 @@ export class ChatController {
   async sendMessage(@Body() dto: SendMessageDto, @Session() session: Record<string, any>, @Req() req: any, @Res() res: any) {
     // Capture session ID at the start
     const initialSessionId = req.sessionID;
+    const clientSessionId = req.headers['x-session-id'] as string;
     
     // Log detailed debug info only in development
     if (process.env.NODE_ENV !== 'production') {
-      const customSessionId = req.headers['x-session-id'] as string;
-      console.log('📍 Custom Session ID from header:', customSessionId);
+      console.log('📍 Client Session ID from header:', clientSessionId);
       console.log('📍 Express Session ID at start:', initialSessionId);
       console.log('📍 Session data keys:', Object.keys(session));
       console.log('🍪 Cookie header:', req.headers.cookie);
@@ -30,24 +30,20 @@ export class ChatController {
       }
     }
     
-    // For custom session IDs, we'll use the Express session ID as the stable identifier
-    // The custom session ID helps us identify returning clients, but we still use Express sessions
-    // Use the initial session ID captured at the start to ensure consistency
-    const sessionIdToUse = initialSessionId;
+    // For WebSocket routing, prefer the client's session ID if available
+    // This ensures we send to the WebSocket that the client is actually connected with
+    const sessionIdForWebSocket = clientSessionId || initialSessionId;
     
     if (process.env.NODE_ENV !== 'production') {
-      console.log('📍 Session ID to use:', sessionIdToUse);
-      console.log('📍 Session ID now:', req.sessionID);
-      if (sessionIdToUse !== req.sessionID) {
-        console.warn('⚠️ Session ID changed during request!', {
-          initial: sessionIdToUse,
-          current: req.sessionID
-        });
+      console.log('📍 Session ID for WebSocket:', sessionIdForWebSocket);
+      console.log('📍 Express Session ID:', req.sessionID);
+      if (clientSessionId && clientSessionId !== initialSessionId) {
+        console.log('📍 Client and server session IDs differ - using client session for WebSocket');
       }
     }
     
     // Process the message with session ID for WebSocket routing
-    const result = await this.chatService.processMessage(dto, req.session, sessionIdToUse);
+    const result = await this.chatService.processMessage(dto, req.session, sessionIdForWebSocket);
     
     // Force session save
     await new Promise<void>((resolve, reject) => {
@@ -76,11 +72,11 @@ export class ChatController {
       }
     }
     
-    // Send the INITIAL session ID in response to maintain consistency
-    res.setHeader('X-Session-Id', sessionIdToUse);
+    // Send the Express session ID in response for consistency
+    res.setHeader('X-Session-Id', initialSessionId);
     res.json({
       ...result,
-      sessionId: sessionIdToUse, // Always return the initial session ID
+      sessionId: initialSessionId, // Always return the Express session ID
     });
   }
 

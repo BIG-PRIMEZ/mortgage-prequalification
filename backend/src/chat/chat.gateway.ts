@@ -153,6 +153,11 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
       console.log(`Message sent to ${clients.size} client(s) for session ${sessionId}`);
     } else {
       console.warn(`No clients found for session ${sessionId}`);
+      // Log current session mappings for debugging
+      console.log('Current session mappings:');
+      this.sessionToClients.forEach((clientSet, sid) => {
+        console.log(`  Session ${sid}: ${clientSet.size} client(s)`);
+      });
     }
   }
 
