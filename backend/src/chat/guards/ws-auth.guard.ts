@@ -41,6 +41,6 @@ export class WsAuthGuard implements CanActivate {
     // - llrmVFWyPmq0-ZFNcogNTXRdq3ZaAz1A
     // - s:llrmVFWyPmq0-ZFNcogNTXRdq3ZaAz1A.signature
     // - sess_1234567890abcdef
-    return sessionId && sessionId.length > 0;
+    return !!sessionId && sessionId.length > 0;
   }
 }
