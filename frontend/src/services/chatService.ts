@@ -105,18 +105,19 @@ class ChatService {
   }
 
   async resetSession(): Promise<void> {
-    // Clear local session ID
-    this.sessionId = null;
-    localStorage.removeItem('mortgage-session-id');
+    // Keep the session ID but clear conversation data
+    console.log('🔄 Resetting conversation data, keeping session:', this.sessionId);
     
-    // Disconnect socket before resetting session
-    socketService.disconnect();
+    // Reset conversation data on backend (session ID is preserved)
+    const response = await this.api.post('/chat/reset');
     
-    // Reset session on backend
-    await this.api.post('/chat/reset');
+    // Session ID should remain the same
+    if (response.data.sessionId) {
+      console.log('✅ Session preserved after reset:', response.data.sessionId);
+    }
     
-    // Clear socket service session
-    socketService.setSessionId('');
+    // Note: We do NOT clear localStorage or disconnect socket
+    // The session continues with the same ID
   }
 
   async initializeSession(): Promise<void> {

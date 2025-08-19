@@ -95,24 +95,31 @@ export class ChatController {
   }
 
   @Post('reset')
-  async resetSession(@Session() session: Record<string, any>) {
-    // Clear conversation state specifically
+  async resetSession(@Session() session: Record<string, any>, @Req() req: any) {
+    // Only clear conversation state and user data, keep session alive
     delete session.conversationState;
     
-    // Clear all other session data
-    Object.keys(session).forEach(key => {
-      if (key !== 'cookie') { // Don't delete the cookie object itself
-        delete session[key];
-      }
+    // Keep session ID but clear only user-specific data
+    const sessionId = req.sessionID;
+    console.log('🔄 Resetting conversation data for session:', sessionId);
+    
+    // Force save the session with cleared conversation data
+    await new Promise<void>((resolve, reject) => {
+      req.session.save((err) => {
+        if (err) {
+          console.error('Error saving session after reset:', err);
+          reject(err);
+        } else {
+          console.log('✅ Session reset successfully, ID preserved:', sessionId);
+          resolve();
+        }
+      });
     });
     
-    // Force save the empty session
-    if (session.save && typeof session.save === 'function') {
-      session.save((err) => {
-        if (err) console.error('Error saving session:', err);
-      });
-    }
-    
-    return { success: true, message: 'Session cleared successfully' };
+    return { 
+      success: true, 
+      message: 'Conversation data cleared successfully',
+      sessionId: sessionId // Return the preserved session ID
+    };
   }
 }
