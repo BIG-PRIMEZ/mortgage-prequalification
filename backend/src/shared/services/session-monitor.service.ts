@@ -1,6 +1,4 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { Interval } from '@nestjs/schedule';
-import { EventEmitter2 } from '@nestjs/event-emitter';
 
 interface SessionMetrics {
   totalSessions: number;
@@ -36,7 +34,12 @@ export class SessionMonitorService {
   private sessionLifetimes: number[] = [];
   private failedAuthAttempts = new Map<string, number>();
 
-  constructor(private eventEmitter: EventEmitter2) {}
+  constructor() {
+    // Set up periodic metrics reporting
+    setInterval(() => {
+      this.reportMetrics();
+    }, 300000); // Every 5 minutes
+  }
 
   logSessionEvent(event: SessionEvent) {
     this.sessionEvents.push(event);
@@ -109,15 +112,17 @@ export class SessionMonitorService {
   }
 
   private alertSuspiciousActivity(event: SessionEvent) {
-    // Emit event for other services to handle (e.g., send alerts)
-    this.eventEmitter.emit('security.alert', {
+    // Log suspicious activity with high priority
+    this.logger.error(`SECURITY ALERT: ${event.type}`, {
       level: 'warning',
       type: event.type,
       details: event,
     });
+    
+    // In production, this would trigger alerts via monitoring service
+    // For now, just log it prominently
   }
 
-  @Interval(300000) // Every 5 minutes
   reportMetrics() {
     this.logger.log('Session Metrics Report', this.metrics);
     
