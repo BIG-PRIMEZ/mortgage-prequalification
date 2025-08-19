@@ -8,9 +8,9 @@ class SocketService {
   private sessionId: string | null = null;
 
   setSessionId(sessionId: string) {
-    this.sessionId = sessionId;
-    // If already connected, send the session ID
-    if (this.socket?.connected) {
+    this.sessionId = sessionId || null;
+    // If already connected and session ID is provided, register it
+    if (this.socket?.connected && sessionId) {
       this.socket.emit('register-session', { sessionId });
     }
   }
@@ -77,6 +77,10 @@ class SocketService {
     if (this.socket) {
       this.socket.emit('message', message);
     }
+  }
+
+  isConnected(): boolean {
+    return this.socket?.connected || false;
   }
 }
 

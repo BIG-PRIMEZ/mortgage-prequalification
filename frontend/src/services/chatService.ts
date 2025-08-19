@@ -101,7 +101,18 @@ class ChatService {
   }
 
   async resetSession(): Promise<void> {
+    // Clear local session ID
+    this.sessionId = null;
+    localStorage.removeItem('mortgage-session-id');
+    
+    // Disconnect socket before resetting session
+    socketService.disconnect();
+    
+    // Reset session on backend
     await this.api.post('/chat/reset');
+    
+    // Clear socket service session
+    socketService.setSessionId('');
   }
 
   async initializeSession(): Promise<void> {
